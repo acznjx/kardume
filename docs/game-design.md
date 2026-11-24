@@ -47,6 +47,58 @@ Referências: Habbo e Club Penguin (salas sociais, chat em bolhas), The Sims (vi
    - A partir de 2 doses vem o soluço e a câmera balança. A partir de 3, o nado fica torto.
    - No nível 5, o barman se recusa a servir mais.
 
+## v0.2: salas grandes e ações sociais (em andamento)
+
+As medidas de cada sala vivem em `packages/shared/src/salas/navio.ts` e `salas/adega.ts`, compartilhadas pelo client (que desenha) e pelo servidor (que valida).
+
+**Navio Naufragado (260 × 220).** O naufrágio fica no centro (casco adernado, rombos, cracas, canhões, velas rasgadas, porão com baú, cofre e o vaso "NÃO É O BAR"). As zonas ficam bem espaçadas, com recifes, pradarias de algas, destroços e trilhas iluminadas entre elas, e escarpas emoldurando o horizonte:
+
+| Zona | Centro (x, z) |
+| --- | --- |
+| Praça do Cardume (chegada) | (0, 66) |
+| Concha Acústica | (−62, 51) |
+| Porta da adega | (68, 45) |
+| Jardim de Corais | (−62, −40) |
+| Arcos de Pedra | (64…94, −43…−57) |
+| Mirante da proa | (59, 0) |
+| Pérola gigante | (−30, −77) |
+| Peixaria | (57, 82) |
+
+**Correntes marinhas:** 7 "rios" visíveis (22 u/s) ligam as zonas: praça ↔ convés, praça ↔ adega, praça → concha, navio → jardim e navio → arcos. Basta nadar para dentro de uma.
+
+**Adega / Bar do Cardume (48 × 36, teto 8).** Ela recupera a identidade da imagem de referência e ficou maior, mas aconchegante:
+- Salão principal com o balcão e 4 pontos de dose.
+- Três cabines em U, recanto dos dardos e palquinho com a Radiola das Marés.
+- 48 lugares para sentar.
+- Paredes cheias de decoração e poças de luz quente.
+
+**Controles:**
+- **Câmera:** clique no aquário e ela segue o mouse (Esc solta). Com o mouse solto, ela volta sozinha para trás do peixe.
+- **Movimento:** nadando, olhar para cima ou para baixo + W sobe ou desce. Shift dá turbo (com rastro de bolhas); Espaço e C sobem e descem.
+
+**Visual:**
+- **Efeitos:** oclusão de ambiente, brilho suave nas lâmpadas e vinheta.
+- **Cáusticas:** luz dançando na areia do navio.
+- **Gráficos:** opção "bonito / leve".
+
+**Ações sociais** (todos veem, e quem chega na sala recebe o estado atual):
+
+| Ação | Como | O que os outros veem |
+| --- | --- | --- |
+| Emotes | teclas 1–5 ou barra no HUD | 👋 👏 ❤️ 😂 🍺 sobre o peixe, com um pulinho |
+| Sentar | E perto de um banco livre | Peixe sentado de pernas para a frente. Lugar ocupado é recusado |
+| Dançar | G (troca o passo) | Balanço, giro ou pulinho, sincronizados pelo horário de início |
+| Brinde coletivo | emote 🍺 com amigos perto | Quem brindou em até 2,5 s e a até 7 unidades ganha "SAÚDE! 🍻" |
+| Dose servida | E num ponto do balcão | O barman vai até o ponto e uma caneca desliza até você |
+
+**Desempenho**
+- Decoração parada é fundida por material (`Estatico`).
+- Cada peixe tem 4 malhas.
+- As algas são instanciadas.
+- A sombra acompanha o jogador.
+- Os nomes somem de longe.
+- As posições vão arredondadas na rede.
+
 ## Perguntas em aberto (do grupo)
 
 - Combate: PvP, só em arenas ou nenhum?

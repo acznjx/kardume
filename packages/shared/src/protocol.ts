@@ -20,6 +20,15 @@ export interface EstadoJogador {
   v: boolean;
 }
 
+export const EMOTES = ['acenar', 'aplaudir', 'coracao', 'rir', 'brinde'] as const;
+export type Emote = (typeof EMOTES)[number];
+
+export const DANCAS = ['balanco', 'giro', 'pulinho'] as const;
+export type Danca = (typeof DANCAS)[number];
+
+/** Ação contínua do peixe (visível para todos e enviada a quem entra na sala). */
+export type Acao = { tipo: 'sentado'; assento: string } | { tipo: 'danca'; estilo: Danca; desde: number };
+
 export interface JogadorPublico {
   id: string;
   nome: string;
@@ -27,6 +36,7 @@ export interface JogadorPublico {
   aparencia: Aparencia;
   estado: EstadoJogador;
   bebida: number;
+  acao: Acao | null;
 }
 
 export interface MensagemChat {
@@ -61,6 +71,12 @@ export interface ServerToClient {
   bebida: (d: { id: string; nivel: number }) => void;
   aparencia: (d: { id: string; aparencia: Aparencia }) => void;
   sino: (d: { id: string }) => void;
+  acao: (d: { id: string; acao: Acao | null }) => void;
+  emote: (d: { id: string; tipo: Emote }) => void;
+  /** brinde coletivo: todos esses peixes brindaram juntos */
+  brinde: (d: { ids: string[] }) => void;
+  /** o barman serviu uma dose no ponto `pontoId` */
+  servido: (d: { id: string; pontoId: string }) => void;
   online: (n: number) => void;
   aviso: (texto: string) => void;
 }
@@ -69,6 +85,10 @@ export interface ClientToServer {
   estado: (e: EstadoJogador) => void;
   chat: (texto: string) => void;
   trocar_sala: (sala: RoomId, ack: (ok: boolean, erro?: string) => void) => void;
-  pedir_dose: (ack: (nivel: number) => void) => void;
+  pedir_dose: (pontoId: string, ack: (nivel: number) => void) => void;
   tocar_sino: () => void;
+  emote: (tipo: Emote) => void;
+  dancar: (estilo: Danca | null) => void;
+  sentar: (assentoId: string, ack: (ok: boolean, erro?: string) => void) => void;
+  levantar: () => void;
 }

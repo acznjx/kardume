@@ -93,6 +93,23 @@
   pointer-events: none;
 }
 
+.ed-frente {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%) rotate(3deg);
+  padding: 4px 8px;
+  background: #e3a83a;
+  border: 1.5px solid var(--tinta);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+  font-family: 'Caveat', cursive;
+  font-size: 19px;
+  line-height: 1;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
 .ed-ferramentas {
   display: flex;
   flex-direction: column;

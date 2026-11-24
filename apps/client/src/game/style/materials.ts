@@ -47,18 +47,91 @@ export const PALETA = {
 
 const cache = new Map<string, THREE.MeshLambertMaterial>();
 
+/**
+ * Cáusticas: a rede de luz dançante que o sol faz no fundo do mar. São desenhadas no próprio
+ * shader dos materiais `mat()`, só em superfícies viradas para cima, e controladas por uniforms
+ * globais (a sala liga/desliga com `definirCausticas`).
+ */
+const CAUSTICAS = { uCausTempo: { value: 0 }, uCausForca: { value: 0 } };
+
+export function definirCausticas(tempo: number, forca: number) {
+  CAUSTICAS.uCausTempo.value = tempo;
+  CAUSTICAS.uCausForca.value = forca;
+}
+
+function comCausticas(m: THREE.MeshLambertMaterial) {
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.uCausTempo = CAUSTICAS.uCausTempo;
+    shader.uniforms.uCausForca = CAUSTICAS.uCausForca;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vCausMundo;\nvarying float vCausCima;')
+      .replace(
+        '#include <project_vertex>',
+        `#include <project_vertex>
+        vec4 causMundo = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          causMundo = instanceMatrix * causMundo;
+        #endif
+        causMundo = modelMatrix * causMundo;
+        vCausMundo = causMundo.xyz;
+        vec3 causN = objectNormal;
+        #ifdef USE_INSTANCING
+          causN = mat3(instanceMatrix) * causN;
+        #endif
+        vCausCima = normalize(mat3(modelMatrix) * causN).y;`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+        uniform float uCausTempo;
+        uniform float uCausForca;
+        varying vec3 vCausMundo;
+        varying float vCausCima;
+        float causticas(vec2 p, float t) {
+          p *= 0.42;
+          vec2 q = p;
+          float v = 0.0;
+          for (int i = 0; i < 3; i++) {
+            float fi = float(i);
+            q = p + vec2(sin(t * 0.55 + q.y * 1.6 + fi * 1.3), cos(t * 0.47 + q.x * 1.4 + fi * 2.1));
+            v += abs(sin(q.x * 2.0 + q.y * 1.7 + t * 0.8 + fi));
+          }
+          v /= 3.0;
+          return pow(clamp(1.0 - v, 0.0, 1.0), 5.0) * 2.2;
+        }`,
+      )
+      .replace(
+        '#include <tonemapping_fragment>',
+        `if (uCausForca > 0.001) {
+          float causC = causticas(vCausMundo.xz, uCausTempo) * smoothstep(0.35, 0.95, vCausCima);
+          // somem com a profundidade (y alto = mais perto da superfície = mais forte)
+          // proporcional à cor da superfície: forte na areia clara, discreta na madeira escura
+          float causAlbedo = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+          vec3 causLuz = mix(vec3(0.30, 0.42, 0.40), diffuseColor.rgb * 0.9 + vec3(0.06, 0.1, 0.1), 0.6);
+          gl_FragColor.rgb += causC * uCausForca * causLuz * smoothstep(0.12, 0.6, causAlbedo) * clamp(0.75 + vCausMundo.y * 0.02, 0.4, 1.1);
+        }
+        #include <tonemapping_fragment>`,
+      );
+  };
+  m.customProgramCacheKey = () => 'cardume-causticas';
+  return m;
+}
+
 /** Material fosco com flat shading, compartilhado por cor. */
 export function mat(cor: string, opcoes: { emissivo?: string; intensidade?: number; vertexColors?: boolean } = {}) {
   const chave = `${cor}|${opcoes.emissivo ?? ''}|${opcoes.intensidade ?? 0}|${opcoes.vertexColors ? 1 : 0}`;
   let m = cache.get(chave);
   if (!m) {
-    m = new THREE.MeshLambertMaterial({
-      color: cor,
-      flatShading: true,
-      vertexColors: opcoes.vertexColors ?? false,
-      emissive: opcoes.emissivo ?? '#000000',
-      emissiveIntensity: opcoes.intensidade ?? 0,
-    });
+    m = comCausticas(
+      new THREE.MeshLambertMaterial({
+        color: cor,
+        flatShading: true,
+        vertexColors: opcoes.vertexColors ?? false,
+        emissive: opcoes.emissivo ?? '#000000',
+        emissiveIntensity: opcoes.intensidade ?? 0,
+      }),
+    );
     cache.set(chave, m);
   }
   return m;

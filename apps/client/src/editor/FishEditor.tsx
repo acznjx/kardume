@@ -8,11 +8,22 @@ import { Fish } from '../game/Fish';
 import type { AlvoPeixe } from '../game/mundo';
 import { CANVAS_H, CANVAS_W } from '../game/fish/desenho3d';
 import { contornoDoDesenho } from './contorno';
+import { Contencao } from '../Contencao';
 import './editor.css';
 
 const CORES = [
-  '#1e1e1e', '#f6f1e6', '#f07a22', '#e8463a', '#ec8a8a', '#f2c53d',
-  '#9fb84a', '#3f8a4c', '#4fb3c8', '#3c5fae', '#8a6cc2', '#8a5a34',
+  '#1e1e1e',
+  '#f6f1e6',
+  '#f07a22',
+  '#e8463a',
+  '#ec8a8a',
+  '#f2c53d',
+  '#9fb84a',
+  '#3f8a4c',
+  '#4fb3c8',
+  '#3c5fae',
+  '#8a6cc2',
+  '#8a5a34',
 ];
 const TAMANHOS = [6, 14, 28];
 const NOMES_MODELO: Record<ModeloPeixe, string> = {
@@ -28,12 +39,26 @@ const NOMES_MODELO: Record<ModeloPeixe, string> = {
 type Ferramenta = 'pincel' | 'borracha' | 'balde';
 
 function Previa({ aparencia }: { aparencia: Aparencia | null }) {
-  const alvo = useRef<AlvoPeixe>({ pos: new THREE.Vector3(0, 0, 0), yaw: 0, modo: 'nadando', movendo: true, bebida: 0 });
+  // o peixe nada para a direita da tela (a "frente"), balançando um pouco para mostrar o volume
+  const alvo = useRef<AlvoPeixe>({
+    pos: new THREE.Vector3(0, 0, 0),
+    yaw: Math.PI / 2,
+    modo: 'nadando',
+    movendo: true,
+    bebida: 0,
+    acao: null,
+  });
   useFrame(({ clock }) => {
-    alvo.current.yaw = clock.elapsedTime * 0.6;
+    alvo.current.yaw = Math.PI / 2 + Math.sin(clock.elapsedTime * 0.7) * 0.45;
   });
   if (!aparencia) return null;
-  return <Fish key={aparencia.tipo === 'desenho' ? aparencia.png.slice(-40) : aparencia.modelo} aparencia={aparencia} alvo={alvo} />;
+  return (
+    <Fish
+      key={aparencia.tipo === 'desenho' ? aparencia.png.slice(-40) : aparencia.modelo}
+      aparencia={aparencia}
+      alvo={alvo}
+    />
+  );
 }
 
 /** Balde de tinta: preenche a área contígua de cor parecida. */
@@ -46,7 +71,11 @@ function preencher(ctx: CanvasRenderingContext2D, x0: number, y0: number, cor: s
   const i0 = (y0 * w + x0) * 4;
   const orig = [d[i0], d[i0 + 1], d[i0 + 2], d[i0 + 3]];
   const parecido = (i: number) =>
-    Math.abs(d[i] - orig[0]) + Math.abs(d[i + 1] - orig[1]) + Math.abs(d[i + 2] - orig[2]) + Math.abs(d[i + 3] - orig[3]) < 90;
+    Math.abs(d[i] - orig[0]) +
+      Math.abs(d[i + 1] - orig[1]) +
+      Math.abs(d[i + 2] - orig[2]) +
+      Math.abs(d[i + 3] - orig[3]) <
+    90;
   if (orig.every((v, k) => Math.abs(v - alvo[k]) < 4)) return;
   const visto = new Uint8Array(w * h);
   const pilha = [y0 * w + x0];
@@ -80,7 +109,9 @@ export function FishEditor() {
   const [cor, setCor] = useState(CORES[2]);
   const [tamanho, setTamanho] = useState(TAMANHOS[1]);
   const [ferramenta, setFerramenta] = useState<Ferramenta>('pincel');
-  const [previa, setPrevia] = useState<Aparencia | null>(usuario?.aparencia ?? { tipo: 'modelo', modelo: 'palhaco' });
+  const [previa, setPrevia] = useState<Aparencia | null>(
+    usuario?.aparencia ?? { tipo: 'modelo', modelo: 'palhaco' },
+  );
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [vazio, setVazio] = useState(true);
@@ -171,6 +202,23 @@ export function FishEditor() {
     if (img) ctx().putImageData(img, 0, 0);
     atualizarPrevia();
   }
+  /** Espelha o desenho na horizontal (para quem desenhou o peixe olhando para a esquerda). */
+  function espelhar() {
+    salvarDesfazer();
+    const c = ctx();
+    const copia = document.createElement('canvas');
+    copia.width = CANVAS_W;
+    copia.height = CANVAS_H;
+    copia.getContext('2d')!.drawImage(c.canvas, 0, 0);
+    c.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    c.save();
+    c.translate(CANVAS_W, 0);
+    c.scale(-1, 1);
+    c.drawImage(copia, 0, 0);
+    c.restore();
+    atualizarPrevia();
+  }
+
   function limpar() {
     salvarDesfazer();
     ctx().clearRect(0, 0, CANVAS_W, CANVAS_H);
@@ -212,7 +260,9 @@ export function FishEditor() {
     <div className="ed">
       <header className="ed-topo">
         <h1>Desenhe seu peixe</h1>
-        <p>Única regra: tem que ser um peixe. Desenhe ele <b>olhando para a direita →</b></p>
+        <p>
+          Única regra: tem que ser um peixe. Desenhe ele <b>olhando para a direita →</b>
+        </p>
       </header>
 
       <div className="ed-mesa">
@@ -220,6 +270,11 @@ export function FishEditor() {
           <i className="ed-fita" />
           <div className="ed-tela">
             {vazio && <div className="ed-dica">desenhe aqui ✎</div>}
+            <div className="ed-frente" aria-hidden>
+              cabeça
+              <br />
+              aqui →
+            </div>
             <canvas
               ref={canvas}
               width={CANVAS_W}
@@ -252,13 +307,39 @@ export function FishEditor() {
             </div>
             <div className="ed-grupo">
               {TAMANHOS.map((t) => (
-                <button key={t} className={tamanho === t && ferramenta !== 'balde' ? 'ativa' : ''} onClick={() => { setTamanho(t); if (ferramenta === 'balde') setFerramenta('pincel'); }} aria-label={`pincel ${t}`}>
+                <button
+                  key={t}
+                  className={tamanho === t && ferramenta !== 'balde' ? 'ativa' : ''}
+                  onClick={() => {
+                    setTamanho(t);
+                    if (ferramenta === 'balde') setFerramenta('pincel');
+                  }}
+                  aria-label={`pincel ${t}`}
+                >
                   <i style={{ width: t / 2 + 4, height: t / 2 + 4 }} />
                 </button>
               ))}
-              <button className={ferramenta === 'pincel' ? 'ativa' : ''} onClick={() => setFerramenta('pincel')}>pincel</button>
-              <button className={ferramenta === 'balde' ? 'ativa' : ''} onClick={() => setFerramenta('balde')}>balde</button>
-              <button className={ferramenta === 'borracha' ? 'ativa' : ''} onClick={() => setFerramenta('borracha')}>borracha</button>
+              <button
+                className={ferramenta === 'pincel' ? 'ativa' : ''}
+                onClick={() => setFerramenta('pincel')}
+              >
+                pincel
+              </button>
+              <button
+                className={ferramenta === 'balde' ? 'ativa' : ''}
+                onClick={() => setFerramenta('balde')}
+              >
+                balde
+              </button>
+              <button
+                className={ferramenta === 'borracha' ? 'ativa' : ''}
+                onClick={() => setFerramenta('borracha')}
+              >
+                borracha
+              </button>
+              <button onClick={espelhar} title="Vira o desenho: a cabeça precisa ficar do lado da seta">
+                espelhar ↔
+              </button>
               <button onClick={voltar}>desfazer</button>
               <button onClick={limpar}>limpar</button>
             </div>
@@ -267,16 +348,22 @@ export function FishEditor() {
 
         <aside className="ed-lado">
           <div className="ed-previa">
-            <span className="ed-etiqueta">prévia 3D</span>
-            <Canvas camera={{ position: [0, 0.6, 4.2], fov: 40 }} dpr={[1, 2]}>
-              <color attach="background" args={['#2f7f86']} />
-              <hemisphereLight args={['#c9f1ef', '#7a6440', 1.4]} />
-              <directionalLight position={[3, 5, 4]} intensity={1.3} />
-              <Previa aparencia={previa} />
-            </Canvas>
+            <span className="ed-etiqueta">prévia: nadando para a frente →</span>
+            <Contencao>
+              <Canvas camera={{ position: [0, 0.6, 4.2], fov: 40 }} dpr={[1, 2]}>
+                <color attach="background" args={['#2f7f86']} />
+                <hemisphereLight args={['#c9f1ef', '#7a6440', 1.4]} />
+                <directionalLight position={[3, 5, 4]} intensity={1.3} />
+                <Previa aparencia={previa} />
+              </Canvas>
+            </Contencao>
           </div>
 
-          {erro && <p className="ed-erro" role="alert">{erro}</p>}
+          {erro && (
+            <p className="ed-erro" role="alert">
+              {erro}
+            </p>
+          )}
           <button className="ed-salvar" onClick={salvarDesenho} disabled={salvando || vazio}>
             {salvando ? 'SALVANDO...' : 'NADAR COM ESSE PEIXE'}
           </button>

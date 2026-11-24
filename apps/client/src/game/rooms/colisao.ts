@@ -33,14 +33,21 @@ export interface DefColisao {
 const dentro = (x: number, z: number, min: [number, number], max: [number, number], folga = 0) =>
   x >= min[0] - folga && x <= max[0] + folga && z >= min[1] - folga && z <= max[1] + folga;
 
-/** Altura do chão sob (x, z), considerando superfícies alcançáveis a partir de y. */
-export function alturaChao(def: DefColisao, x: number, z: number, y: number) {
+/**
+ * Altura do chão sob (x, z), considerando superfícies alcançáveis a partir dos pés em y.
+ * `degrau` é quanto o peixe consegue subir andando (escadas e palcos baixos); nadando use 0.
+ */
+export function alturaChao(def: DefColisao, x: number, z: number, y: number, degrau = 0) {
   let chao = 0;
+  const limite = y + Math.max(0.05, degrau);
   for (const s of def.superficies) {
-    if (dentro(x, z, s.min, s.max) && s.y <= y + 0.05 && s.y > chao) chao = s.y;
+    if (dentro(x, z, s.min, s.max) && s.y <= limite && s.y > chao) chao = s.y;
   }
   return chao;
 }
+
+/** Degrau máximo que dá para subir andando em pé. */
+export const DEGRAU = 0.9;
 
 /**
  * Empurra o peixe para fora dos obstáculos (no plano x/z) e respeita as lajes (no eixo y).

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { ModeloPeixe } from '@cardume/shared';
 import { PALETA, mat, pintarFaces } from '../style/materials';
+import { mesclarEmUmaMalha } from './mesclar';
 
 /**
  * Peixes prontos, no estilo da imagem de referência (Bar do Cardume).
@@ -246,11 +247,13 @@ export function criarModelo(modelo: ModeloPeixe | 'barman'): PartesPeixe {
 
   r.acessorio?.(g);
 
-  g.traverse((o) => {
-    if ((o as THREE.Mesh).isMesh) {
-      o.castShadow = true;
-      o.receiveShadow = false;
-    }
-  });
-  return { grupo: g, cauda: pivo, base: BASE_MODELO, altura: 1.4 };
+  // desempenho: o corpo inteiro (olhos, barbatanas, acessórios) vira 1 malha e a cauda outra
+  g.remove(pivo);
+  const corpoUnico = mesclarEmUmaMalha(g);
+  const caudaUnica = mesclarEmUmaMalha(pivo);
+  pivo.clear();
+  pivo.add(caudaUnica);
+  const final = new THREE.Group();
+  final.add(corpoUnico, pivo);
+  return { grupo: final, cauda: pivo, base: BASE_MODELO, altura: 1.4 };
 }

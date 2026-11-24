@@ -2,9 +2,12 @@ import * as THREE from 'three';
 import { create } from 'zustand';
 import { io, type Socket } from 'socket.io-client';
 import {
+  ASSENTO_POR_ID,
   LIMITES,
   ROOMS,
+  type Acao,
   type Aparencia,
+  type Emote,
   type ClientToServer,
   type EstadoJogador,
   type MensagemChat,
@@ -20,12 +23,14 @@ export interface AlvoPeixe {
   modo: Modo;
   movendo: boolean;
   bebida: number;
+  acao: Acao | null;
 }
 
 export interface InfoJogador {
   nome: string;
   aparencia: Aparencia;
   bebida: number;
+  acao: Acao | null;
 }
 
 interface Remoto {
@@ -48,6 +53,14 @@ interface MundoState {
   sinoEm: number;
   /** o servidor encerrou a conexão (outra janela, sessão expirada): não reconecta sozinho */
   encerrado: string | null;
+  /** emotes ativos por peixe */
+  emotes: Record<string, { tipo: Emote; ate: number }>;
+  /** peixes que acabaram de participar de um brinde coletivo */
+  brindes: Record<string, number>;
+  /** última dose servida (para o barman e a caneca deslizando) */
+  servido: { id: string; pontoId: string; em: number } | null;
+  /** ação do próprio jogador (sentado, dançando) */
+  minhaAcao: Acao | null;
 }
 
 export const useMundo = create<MundoState>(() => ({
@@ -63,7 +76,18 @@ export const useMundo = create<MundoState>(() => ({
   aviso: null,
   sinoEm: 0,
   encerrado: null,
+  emotes: {},
+  brindes: {},
+  servido: null,
+  minhaAcao: null,
 }));
+
+/** Assentos ocupados por outros peixes na sala atual. */
+export function assentosOcupados() {
+  const set = new Set<string>();
+  for (const info of Object.values(useMundo.getState().remotos)) if (info.acao?.tipo === 'sentado') set.add(info.acao.assento);
+  return set;
+}
 
 export function avisar(texto: string) {
   useMundo.setState({ aviso: { texto, id: Date.now() } });
@@ -76,6 +100,7 @@ export const local: AlvoPeixe = {
   modo: 'nadando',
   movendo: false,
   bebida: 0,
+  acao: null,
 };
 
 const remotos = new Map<string, Remoto>();
@@ -110,6 +135,8 @@ export function interpolarRemotos() {
     r.alvo.yaw = lerpAngulo(a.e.r, c.e.r, f);
     r.alvo.modo = c.e.m;
     r.alvo.movendo = c.e.v;
+    // sentado: crava no assento (sem interpolar o "pulo" até ele)
+    if (r.alvo.acao?.tipo === 'sentado') r.alvo.pos.fromArray(c.e.p);
   }
 }
 
@@ -122,11 +149,31 @@ export function getSocket() {
   return socket;
 }
 
-function novoRemoto(id: string, e: EstadoJogador, bebida: number) {
+function novoRemoto(id: string, e: EstadoJogador, bebida: number, acao: Acao | null) {
   remotos.set(id, {
     buffer: [{ t: performance.now(), e }],
-    alvo: { pos: new THREE.Vector3().fromArray(e.p), yaw: e.r, modo: e.m, movendo: e.v, bebida },
+    alvo: { pos: new THREE.Vector3().fromArray(e.p), yaw: e.r, modo: e.m, movendo: e.v, bebida, acao },
   });
+}
+
+function aplicarAcao(id: string, acao: Acao | null) {
+  const st = useMundo.getState();
+  if (id === st.voce) {
+    local.acao = acao;
+    if (acao?.tipo === 'sentado') {
+      const a = ASSENTO_POR_ID.get(acao.assento);
+      if (a) {
+        local.pos.set(a.pos[0], a.pos[1] + 0.6, a.pos[2]);
+        local.yaw = a.yaw;
+        local.modo = 'empe';
+      }
+    }
+    useMundo.setState({ minhaAcao: acao });
+    return;
+  }
+  const r = remotos.get(id);
+  if (r) r.alvo.acao = acao;
+  if (st.remotos[id]) useMundo.setState({ remotos: { ...st.remotos, [id]: { ...st.remotos[id], acao } } });
 }
 
 export function conectar(visitante: boolean) {
@@ -148,18 +195,33 @@ export function conectar(visitante: boolean) {
     local.yaw = estado.r;
     local.modo = estado.m;
     local.bebida = bebida;
+    local.acao = null;
     remotos.clear();
     const info: Record<string, InfoJogador> = {};
     for (const j of jogadores) {
-      novoRemoto(j.id, j.estado, j.bebida);
-      info[j.id] = { nome: j.nome, aparencia: j.aparencia, bebida: j.bebida };
+      novoRemoto(j.id, j.estado, j.bebida, j.acao);
+      info[j.id] = { nome: j.nome, aparencia: j.aparencia, bebida: j.bebida, acao: j.acao };
     }
-    useMundo.setState((st) => ({ voce, sala, bebida, remotos: info, chat: historico, bolhas: {}, entrada: st.entrada + 1 }));
+    useMundo.setState((st) => ({
+      voce,
+      sala,
+      bebida,
+      remotos: info,
+      chat: historico,
+      bolhas: {},
+      emotes: {},
+      brindes: {},
+      servido: null,
+      minhaAcao: null,
+      entrada: st.entrada + 1,
+    }));
   });
 
   s.on('entrou', (j) => {
-    novoRemoto(j.id, j.estado, j.bebida);
-    useMundo.setState((st) => ({ remotos: { ...st.remotos, [j.id]: { nome: j.nome, aparencia: j.aparencia, bebida: j.bebida } } }));
+    novoRemoto(j.id, j.estado, j.bebida, j.acao);
+    useMundo.setState((st) => ({
+      remotos: { ...st.remotos, [j.id]: { nome: j.nome, aparencia: j.aparencia, bebida: j.bebida, acao: j.acao } },
+    }));
   });
 
   s.on('saiu', (id) => {
@@ -207,6 +269,18 @@ export function conectar(visitante: boolean) {
   });
 
   s.on('sino', () => useMundo.setState({ sinoEm: performance.now() }));
+  s.on('acao', ({ id, acao }) => aplicarAcao(id, acao));
+  s.on('emote', ({ id, tipo }) =>
+    useMundo.setState((st) => ({ emotes: { ...st.emotes, [id]: { tipo, ate: Date.now() + 2600 } } })),
+  );
+  s.on('brinde', ({ ids }) =>
+    useMundo.setState((st) => {
+      const brindes = { ...st.brindes };
+      for (const id of ids) brindes[id] = Date.now() + 3000;
+      return { brindes };
+    }),
+  );
+  s.on('servido', ({ id, pontoId }) => useMundo.setState({ servido: { id, pontoId, em: performance.now() } }));
   s.on('online', (n) => useMundo.setState({ online: n }));
   s.on('aviso', (texto) => {
     ultimoAviso = texto;
@@ -235,7 +309,21 @@ export function desconectar() {
   socket = null;
   remotos.clear();
   local.bebida = 0;
-  useMundo.setState({ conectado: false, voce: null, remotos: {}, chat: [], bolhas: {}, bebida: 0, sala: 'navio', encerrado: null });
+  local.acao = null;
+  useMundo.setState({
+    conectado: false,
+    voce: null,
+    remotos: {},
+    chat: [],
+    bolhas: {},
+    bebida: 0,
+    sala: 'navio',
+    encerrado: null,
+    emotes: {},
+    brindes: {},
+    servido: null,
+    minhaAcao: null,
+  });
 }
 
 // gancho de depuração (só em desenvolvimento): usado pelos testes de ponta a ponta

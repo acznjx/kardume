@@ -3,15 +3,23 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Server, Socket } from 'socket.io';
 import {
+  ASSENTO_POR_ID,
+  DANCAS,
+  EMOTES,
+  INTERACAO_POR_ID,
   LIMITES,
-  PONTOS,
   PORTAS,
+  RAIO_SPAWN,
+  alcanca,
   ROOMS,
   ROOM_IDS,
   criarFiltro,
   distancia,
   embaralharTexto,
+  type Acao,
   type Aparencia,
+  type Danca,
+  type Emote,
   type ClientToServer,
   type EstadoJogador,
   type JogadorPublico,
@@ -36,6 +44,8 @@ interface Jogador {
   ultimoEstadoEm: number;
   bebida: number;
   bebidaDesde: number;
+  acao: Acao | null;
+  ultimoBrinde: number;
   socket: Sock;
 }
 
@@ -66,6 +76,9 @@ function carregarBloqueadas() {
 }
 
 const limitar = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+const arred = (v: number, casas = 2) => Math.round(v * 10 ** casas) / 10 ** casas;
+/** posição aproximada dos pés (o estado guarda o centro do peixe) */
+const pes = (p: readonly number[]) => [p[0], p[1] - 1.0, p[2]];
 
 export function criarSalas(io: Io, auth: Auth) {
   const jogadores = new Map<string, Jogador>();
@@ -73,6 +86,10 @@ export function criarSalas(io: Io, auth: Auth) {
   const filtrar = criarFiltro(carregarBloqueadas());
   const limiteChat = criarLimitador(5, 5000);
   const limiteSino = criarLimitador(1, 2500);
+  const limiteEmote = criarLimitador(4, 4000);
+  const limiteAcao = criarLimitador(8, 4000);
+  /** assentoId -> id do jogador sentado */
+  const assentos = new Map<string, string>();
   let numeroVisitante = 1;
 
   const publico = (j: Jogador): JogadorPublico => ({
@@ -82,6 +99,7 @@ export function criarSalas(io: Io, auth: Auth) {
     aparencia: j.aparencia,
     estado: j.estado,
     bebida: j.bebida,
+    acao: j.acao,
   });
 
   const online = () => [...jogadores.values()].filter((j) => !j.visitante).length;
@@ -89,11 +107,29 @@ export function criarSalas(io: Io, auth: Auth) {
 
   function estadoInicial(sala: RoomId, pos?: readonly number[]): EstadoJogador {
     const s = pos ?? ROOMS[sala].spawn;
-    return { p: [s[0], s[1], s[2]], r: Math.PI, m: 'nadando', v: false };
+    // espalha a chegada num círculo para ninguém nascer empilhado
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * (pos ? 2 : RAIO_SPAWN);
+    return { p: [arred(s[0] + Math.cos(a) * r), s[1], arred(s[2] + Math.sin(a) * r)], r: Math.PI, m: 'nadando', v: false };
+  }
+
+  /** Encerra a ação contínua (levanta do assento, para de dançar). */
+  function encerrarAcao(j: Jogador, avisar = true) {
+    if (!j.acao) return;
+    if (j.acao.tipo === 'sentado' && assentos.get(j.acao.assento) === j.id) assentos.delete(j.acao.assento);
+    j.acao = null;
+    if (avisar) io.to(j.sala).emit('acao', { id: j.id, acao: null });
+  }
+
+  function definirAcao(j: Jogador, acao: Acao) {
+    encerrarAcao(j, false);
+    j.acao = acao;
+    io.to(j.sala).emit('acao', { id: j.id, acao });
   }
 
   function entrarNaSala(j: Jogador, sala: RoomId, pos?: readonly number[]) {
     const anterior = j.sala;
+    encerrarAcao(j, false);
     j.socket.leave(anterior);
     if (!j.visitante) io.to(anterior).emit('saiu', j.id);
     j.sala = sala;
@@ -142,7 +178,7 @@ export function criarSalas(io: Io, auth: Auth) {
       const f = max / d;
       for (let i = 0; i < 3; i++) alvo[i] = j.estado.p[i] + (alvo[i] - j.estado.p[i]) * f;
     }
-    return { p: alvo, r: e.r % (Math.PI * 2), m: e.m, v: !!e.v };
+    return { p: [arred(alvo[0]), arred(alvo[1]), arred(alvo[2])], r: arred(e.r % (Math.PI * 2), 3), m: e.m, v: !!e.v };
   }
 
   io.on('connection', (socket: Sock) => {
@@ -177,6 +213,8 @@ export function criarSalas(io: Io, auth: Auth) {
       ultimoEstadoEm: Date.now(),
       bebida: 0,
       bebidaDesde: 0,
+      acao: null,
+      ultimoBrinde: 0,
       socket,
     };
     jogadores.set(j.id, j);
@@ -185,8 +223,12 @@ export function criarSalas(io: Io, auth: Auth) {
 
     socket.on('estado', (e) => {
       if (j.visitante) return;
+      // sentado: o peixe fica preso ao assento até levantar
+      if (j.acao?.tipo === 'sentado') return;
       const ok = validarEstado(j, e);
-      if (ok) j.estado = ok;
+      if (!ok) return;
+      j.estado = ok;
+      if (ok.v && j.acao?.tipo === 'danca') encerrarAcao(j);
     });
 
     socket.on('chat', (texto) => {
@@ -222,29 +264,83 @@ export function criarSalas(io: Io, auth: Auth) {
       ack(true);
     });
 
-    socket.on('pedir_dose', (ack) => {
+    socket.on('pedir_dose', (pontoId, ack) => {
       if (typeof ack !== 'function') return;
-      if (j.visitante || j.sala !== PONTOS.balcao.sala) return ack(j.bebida);
-      if (distancia(j.estado.p, PONTOS.balcao.pos, true) > PONTOS.balcao.raio + 1)
-        return ack(j.bebida), socket.emit('aviso', 'Chegue no balcão para pedir.');
+      const ponto = typeof pontoId === 'string' ? INTERACAO_POR_ID.get(pontoId) : undefined;
+      if (j.visitante || !ponto || ponto.tipo !== 'dose' || ponto.sala !== j.sala) return ack(j.bebida);
+      if (!alcanca(pes(j.estado.p), ponto, 1.2)) return ack(j.bebida), socket.emit('aviso', 'Chegue no balcão para pedir.');
       if (j.bebida >= LIMITES.bebidaMax) {
         socket.emit('aviso', 'O barman diz: "Chega por hoje, campeão. Vai uma água?"');
         return ack(j.bebida);
       }
       j.bebida += 1;
       j.bebidaDesde = Date.now();
+      io.to(j.sala).emit('servido', { id: j.id, pontoId: ponto.id });
       io.to(j.sala).emit('bebida', { id: j.id, nivel: j.bebida });
       ack(j.bebida);
     });
 
     socket.on('tocar_sino', () => {
-      if (j.visitante || j.sala !== PONTOS.sino.sala) return;
-      if (distancia(j.estado.p, PONTOS.sino.pos) > PONTOS.sino.raio + 1) return;
+      const sino = INTERACAO_POR_ID.get('sino')!;
+      if (j.visitante || j.sala !== sino.sala) return;
+      if (!alcanca(pes(j.estado.p), sino, 1.2)) return;
       if (!limiteSino(j.sala)) return;
       io.to(j.sala).emit('sino', { id: j.id });
     });
 
+    socket.on('emote', (tipo) => {
+      if (j.visitante || !(EMOTES as readonly string[]).includes(tipo)) return;
+      if (!limiteEmote(j.id)) return;
+      io.to(j.sala).emit('emote', { id: j.id, tipo: tipo as Emote });
+      if (tipo !== 'brinde') return;
+      // brinde coletivo: junta quem brindou perto e há pouco tempo
+      const agora = Date.now();
+      j.ultimoBrinde = agora;
+      const grupo = [...jogadores.values()].filter(
+        (o) =>
+          o.sala === j.sala &&
+          !o.visitante &&
+          agora - o.ultimoBrinde < LIMITES.brindeJanelaMs &&
+          distancia(o.estado.p, j.estado.p) < LIMITES.brindeRaio,
+      );
+      if (grupo.length >= 2) {
+        for (const o of grupo) o.ultimoBrinde = 0;
+        io.to(j.sala).emit('brinde', { ids: grupo.map((o) => o.id) });
+      }
+    });
+
+    socket.on('dancar', (estilo) => {
+      if (j.visitante || !limiteAcao(j.id)) return;
+      if (estilo === null) return encerrarAcao(j);
+      if (!(DANCAS as readonly string[]).includes(estilo)) return;
+      definirAcao(j, { tipo: 'danca', estilo: estilo as Danca, desde: Date.now() });
+    });
+
+    socket.on('sentar', (assentoId, ack) => {
+      if (typeof ack !== 'function') return;
+      if (j.visitante || !limiteAcao(j.id)) return ack(false);
+      const a = typeof assentoId === 'string' ? ASSENTO_POR_ID.get(assentoId) : undefined;
+      if (!a || a.sala !== j.sala) return ack(false, 'Esse lugar não existe.');
+      const dono = assentos.get(a.id);
+      if (dono && dono !== j.id) return ack(false, 'Esse lugar já está ocupado.');
+      const p = j.estado.p;
+      if (Math.hypot(p[0] - a.pos[0], p[2] - a.pos[2]) > LIMITES.alcanceAssento + 1 || Math.abs(p[1] - a.pos[1]) > 3)
+        return ack(false, 'Chegue mais perto para sentar.');
+      encerrarAcao(j, false);
+      assentos.set(a.id, j.id);
+      j.estado = { p: [a.pos[0], arred(a.pos[1] + 0.6), a.pos[2]], r: a.yaw, m: 'empe', v: false };
+      definirAcao(j, { tipo: 'sentado', assento: a.id });
+      ack(true);
+    });
+
+    socket.on('levantar', () => {
+      if (j.acao?.tipo !== 'sentado') return;
+      j.ultimoEstadoEm = Date.now();
+      encerrarAcao(j);
+    });
+
     socket.on('disconnect', () => {
+      encerrarAcao(j, false);
       jogadores.delete(j.id);
       if (!j.visitante) io.to(j.sala).emit('saiu', j.id);
       avisarOnline();

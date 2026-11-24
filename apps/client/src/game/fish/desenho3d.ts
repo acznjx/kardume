@@ -173,8 +173,10 @@ export function materialOndulante(map: THREE.Texture) {
       .replace(
         '#include <begin_vertex>',
         `#include <begin_vertex>
-        float cauda = smoothstep(0.35, -1.0, position.x);
-        transformed.z += sin(uTempo * 9.0 - position.x * 2.6) * 0.16 * cauda * uForca;`,
+        // 1 na cauda (-X), 0 na cabeça (+X). smoothstep precisa de edge0 < edge1 (o contrário é indefinido em GLSL)
+        float cauda = 1.0 - smoothstep(-1.0, 0.35, position.x);
+        // a onda corre da cabeça para a cauda (fase cresce com x), como num peixe de verdade
+        transformed.z += sin(uTempo * 9.0 + position.x * 2.6) * 0.18 * cauda * cauda * uForca;`,
       );
   };
   m.customProgramCacheKey = () => 'peixe-ondulante';
