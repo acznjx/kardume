@@ -25,6 +25,9 @@ function useEscala() {
     const ajustar = () => {
       const e = Math.min(window.innerWidth / 1600, window.innerHeight / 730);
       document.documentElement.style.setProperty('--escala', String(e));
+      document.documentElement.style.setProperty('--escala-ui', String(Math.min(1.35, Math.max(0.8, e))));
+      const sobra = Math.max(0, (window.innerHeight - 730 * e) / 2);
+      document.documentElement.style.setProperty('--desce', `${Math.round(sobra * 0.5)}px`);
     };
     ajustar();
     window.addEventListener('resize', ajustar);
@@ -202,7 +205,7 @@ export function LoginScreen() {
         <div className="lg-sub">um aquário social · beta fechado</div>
 
         {/* carteirinha */}
-        <form className="lg-cartao" onSubmit={enviar}>
+        <form className={`lg-cartao ${aba === 'novo' ? 'lg-cartao--novo' : ''}`} onSubmit={enviar} onChange={() => setErro(null)}>
           <i className="lg-fita lg-fita--esq" />
           <i className="lg-fita lg-fita--dir" />
           <div className="lg-cartao__topo">
@@ -283,22 +286,23 @@ export function LoginScreen() {
           <i className="lg-regua__marca" />
         </div>
 
-        {/* rodapé */}
-        <div className="lg-rodape">
-          <span className="lg-caixa">
-            servidor:
-            <select aria-label="servidor" defaultValue="coral-raso">
-              <option value="coral-raso">Coral Raso</option>
-            </select>
-          </span>
-          <span className="lg-caixa">
-            <i className={`lg-status ${online.ok ? '' : 'off'}`} />
-            {online.ok ? 'conexão estável' : 'sem conexão'}
-          </span>
-          <div className="lg-rodape__dir">
-            <span className="lg-caixa">v0.0.1 · protótipo</span>
-            <span>© 2026 Cardume</span>
-          </div>
+      </div>
+
+      {/* rodapé (preso ao pé da tela) */}
+      <div className="lg-rodape">
+        <span className="lg-caixa">
+          servidor:
+          <select aria-label="servidor" defaultValue="coral-raso">
+            <option value="coral-raso">Coral Raso</option>
+          </select>
+        </span>
+        <span className="lg-caixa">
+          <i className={`lg-status ${online.ok ? '' : 'off'}`} />
+          {online.ok ? 'conexão estável' : 'sem conexão'}
+        </span>
+        <div className="lg-rodape__dir">
+          <span className="lg-caixa">v0.0.1 · protótipo</span>
+          <span>© 2026 Cardume</span>
         </div>
       </div>
 

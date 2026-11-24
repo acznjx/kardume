@@ -51,11 +51,13 @@
 .lg-palco {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  top: 50%;
   width: 1600px;
   height: 730px;
-  transform-origin: 50% 100%;
-  transform: translateX(-50%) scale(var(--escala, 1));
+  /* centralizado nos dois eixos: em telas mais altas que 16:9 não sobra um vazio em cima */
+  transform-origin: 50% 50%;
+  /* --desce: em telas altas, desce o palco um pouco para equilibrar água e areia */
+  transform: translate(-50%, calc(-50% + var(--desce, 0px))) scale(var(--escala, 1));
 }
 
 /* ---------- sol ---------- */
@@ -84,7 +86,7 @@
   left: -3000px;
   right: -3000px;
   top: 640px;
-  bottom: -400px;
+  bottom: -1600px; /* a areia continua até o pé da tela, mesmo com o palco centralizado */
   background: linear-gradient(180deg, var(--areia-1) 0%, var(--areia-2) 30%, var(--areia-3) 100%);
 }
 .lg-areia::before {
@@ -330,10 +332,20 @@
   background-color: var(--papel);
   background-image: radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1.5px);
   background-size: 4px 4px;
-  transform: rotate(-0.4deg);
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3), 2px 3px 0 rgba(0, 0, 0, 0.12);
   z-index: 3;
 }
+/* cadastro: um campo a mais; sobe um pouco e aperta os espaços para caber na tela */
+.lg-cartao--novo {
+  top: 198px;
+  padding-top: 20px;
+  padding-bottom: 16px;
+}
+.lg-cartao--novo .lg-campo { margin-top: 9px; }
+.lg-cartao--novo .lg-campo input { height: 40px; }
+.lg-cartao--novo .lg-linha { margin-top: 11px; }
+.lg-cartao--novo .lg-botao { margin-top: 12px; height: 47px; }
+.lg-cartao--novo .lg-visitante { margin-top: 12px; }
 .lg-fita {
   position: absolute;
   width: 96px;
@@ -583,10 +595,13 @@
 
 /* ---------- rodapé ---------- */
 .lg-rodape {
-  position: absolute;
-  left: 37px;
-  right: 60px;
-  top: 684px;
+  /* preso ao pé da tela (fora do palco), com tamanho acompanhando a escala */
+  position: fixed;
+  left: 2.3vw;
+  right: 3.6vw;
+  bottom: 2.4vh;
+  zoom: var(--escala-ui, 1);
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 11px;
@@ -676,6 +691,6 @@
   .lg-sub { position: relative; left: auto; top: auto; margin-top: 14px; font-size: 13px; }
   .lg-cartao { position: relative; left: auto; top: auto; margin-top: 34px; width: 100%; max-width: 400px; box-sizing: border-box; }
   .lg-areia { top: auto; height: 70px; bottom: 0; position: fixed; }
-  .lg-rodape { position: fixed; left: 12px; right: 12px; top: auto; bottom: 18px; font-size: 11px; flex-wrap: wrap; }
+  .lg-rodape { position: fixed; left: 12px; right: 12px; top: auto; bottom: 18px; font-size: 11px; flex-wrap: wrap; zoom: 1; }
   .lg-rodape__dir { display: none; }
 }

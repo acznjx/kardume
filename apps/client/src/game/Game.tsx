@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Aparencia, RoomId } from '@cardume/shared';
 import { useApp } from '../store';
@@ -10,7 +10,7 @@ import { Navio, COLISAO_NAVIO } from './rooms/Navio';
 import { Adega, COLISAO_ADEGA } from './rooms/Adega';
 import { Hud } from '../hud/Hud';
 import { Contencao } from '../Contencao';
-import { Efeitos, useGraficos } from './Efeitos';
+import { Efeitos, dprPara, useGraficos } from './Efeitos';
 import '../hud/hud.css';
 
 const COLISOES = { navio: COLISAO_NAVIO, adega: COLISAO_ADEGA };
@@ -72,6 +72,17 @@ function Jogadores({
   );
 }
 
+/** Só em desenvolvimento: expõe o renderizador para medir memória da placa de vídeo nos testes. */
+function Diagnostico() {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __cardume?: Record<string, unknown> };
+    w.__cardume = { ...(w.__cardume ?? {}), gl };
+  }, [gl]);
+  return null;
+}
+
 function Sala({ sala }: { sala: RoomId }) {
   return sala === 'adega' ? <Adega /> : <Navio />;
 }
@@ -82,6 +93,8 @@ export function Game() {
   const sala = useMundo((s) => s.sala);
   const entrada = useMundo((s) => s.entrada);
   const qualidade = useGraficos((s) => s.qualidade);
+  const fator = useGraficos((s) => s.fator);
+  const [gpuCaiu, setGpuCaiu] = useState(false);
 
   useEffect(() => {
     conectar(visitante);
@@ -108,14 +121,28 @@ export function Game() {
         <Canvas
           key={qualidade}
           shadows={qualidade === 'bonito' ? 'soft' : false}
-          dpr={qualidade === 'bonito' ? [1, 1.75] : [1, 1]}
+          dpr={dprPara(qualidade, fator)}
           camera={{ fov: 52, near: 0.1, far: 320, position: [0, 6, 20] }}
-          gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+          gl={{
+            // o antisserrilhamento fica com o SMAA do pós-processamento (no "leve", com o do navegador)
+            antialias: qualidade === 'leve',
+            powerPreference: 'high-performance',
+            toneMapping: THREE.ACESFilmicToneMapping,
+            toneMappingExposure: 1.05,
+          }}
+          onCreated={({ gl }) => {
+            // se a placa de vídeo reiniciar, mostra "recarregar" em vez de deixar a tela morta
+            gl.domElement.addEventListener('webglcontextlost', (e) => {
+              e.preventDefault();
+              setGpuCaiu(true);
+            });
+          }}
           onContextMenu={(e) => e.preventDefault()}
         >
           <Suspense fallback={null}>
             <Sala key={entrada} sala={sala} />
             <Efeitos sala={sala} />
+            <Diagnostico />
             <Jogadores
               visitante={visitante}
               aparenciaPropria={aparencia}
@@ -126,6 +153,25 @@ export function Game() {
         </Canvas>
       </Contencao>
       <Hud />
+      {gpuCaiu && (
+        <div className="carregando" style={{ zIndex: 60 }}>
+          <div style={{ textAlign: 'center', maxWidth: 420, padding: 16 }}>
+            A placa de vídeo pediu arrego e reiniciou.
+            <br />
+            Experimente os gráficos no modo leve.
+            <br />
+            <button
+              onClick={() => {
+                if (useGraficos.getState().qualidade === 'bonito') useGraficos.getState().alternar();
+                window.location.reload();
+              }}
+              style={{ marginTop: 14 }}
+            >
+              recarregar no modo leve
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
