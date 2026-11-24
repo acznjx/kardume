@@ -1,0 +1,219 @@
+.ed {
+  --papel: #ece6d7;
+  --tinta: #222324;
+  --coral: #e26a4f;
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  padding: 24px 16px 32px;
+  background: linear-gradient(180deg, #4b8b93 0%, #36727d 40%, #285e69 80%, #224f59 100%);
+  color: var(--tinta);
+  font-family: 'Courier Prime', monospace;
+}
+
+.ed-topo {
+  text-align: center;
+  color: #f1ece0;
+  margin-bottom: 22px;
+}
+.ed-topo h1 {
+  display: inline-block;
+  margin: 0;
+  padding: 6px 18px 4px;
+  background: #f1ece0;
+  color: var(--tinta);
+  border: 2px solid var(--tinta);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
+  font-family: 'Abril Fatface', serif;
+  font-weight: 400;
+  font-size: clamp(26px, 4vw, 40px);
+  transform: rotate(-1.5deg);
+}
+.ed-topo p {
+  margin: 14px 0 0;
+  font-family: 'Special Elite', monospace;
+  font-size: 15px;
+}
+
+.ed-mesa {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.ed-papel {
+  position: relative;
+  flex: 1 1 560px;
+  max-width: 620px;
+  padding: 18px;
+  background: var(--papel);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3), 2px 3px 0 rgba(0, 0, 0, 0.12);
+  transform: rotate(-0.4deg);
+}
+.ed-fita {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  width: 110px;
+  height: 30px;
+  margin-left: -55px;
+  background: rgba(238, 214, 150, 0.75);
+  transform: rotate(-3deg);
+}
+.ed-tela {
+  position: relative;
+  border: 2px dashed #8b8578;
+  background-color: #faf8f2;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.ed-canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  touch-action: none;
+  cursor: crosshair;
+}
+.ed-canvas--balde {
+  cursor: cell;
+}
+.ed-dica {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: 'Caveat', cursive;
+  font-size: 34px;
+  color: rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+}
+
+.ed-ferramentas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+.ed-cores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.ed-cores button {
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--tinta);
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+}
+.ed-cores button.ativa {
+  outline: 3px solid var(--coral);
+  outline-offset: 2px;
+}
+.ed-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ed-grupo button,
+.ed-modelos button,
+.ed-voltar {
+  height: 34px;
+  min-width: 34px;
+  padding: 0 10px;
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid var(--tinta);
+  background: #f8f6f0;
+  box-shadow: 2px 2px 0 var(--tinta);
+  font-family: 'Courier Prime', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ed-grupo button.ativa {
+  background: var(--tinta);
+  color: #f3eee2;
+}
+.ed-grupo button i {
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ed-lado {
+  flex: 0 1 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ed-previa {
+  position: relative;
+  height: 250px;
+  border: 2px solid var(--tinta);
+  box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.35);
+  background: #2f7f86;
+}
+.ed-etiqueta {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  padding: 2px 8px;
+  background: #f2efe6;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+}
+.ed-salvar {
+  height: 54px;
+  border: 2px solid var(--tinta);
+  background: var(--coral);
+  color: #fbeee3;
+  box-shadow: 3px 3px 0 var(--tinta);
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 15px;
+  letter-spacing: 2.5px;
+  cursor: pointer;
+}
+.ed-salvar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.ed-erro {
+  margin: 0;
+  padding: 7px 10px;
+  background: #f6efd9;
+  border-left: 3px solid var(--coral);
+  font-family: 'Special Elite', monospace;
+  font-size: 13px;
+}
+.ed-modelos {
+  padding: 12px;
+  background: #d5b588;
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.2);
+  transform: rotate(0.8deg);
+}
+.ed-modelos > span {
+  display: block;
+  margin-bottom: 8px;
+  font-family: 'Special Elite', monospace;
+  font-size: 13.5px;
+}
+.ed-modelos > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ed-voltar {
+  align-self: center;
+  background: transparent;
+  color: #f1ece0;
+  border-color: #f1ece0;
+  box-shadow: none;
+}

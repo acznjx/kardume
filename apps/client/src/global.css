@@ -1,0 +1,42 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: #2b6370;
+  color: #222324;
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid #e3a83a;
+  outline-offset: 2px;
+}
+
+.carregando {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #4b8b93, #224f59);
+  color: #efe9db;
+  font-family: 'Special Elite', monospace;
+  font-size: 18px;
+}

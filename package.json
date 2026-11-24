@@ -1,0 +1,21 @@
+{
+  "name": "cardume",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Cardume — um aquário social em 3D no navegador.",
+  "type": "module",
+  "workspaces": ["packages/shared", "apps/server", "apps/client"],
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c cyan,magenta \"npm run dev -w @cardume/server\" \"npm run dev -w @cardume/client\"",
+    "build": "npm run build -w @cardume/client",
+    "start": "npm run start -w @cardume/server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
