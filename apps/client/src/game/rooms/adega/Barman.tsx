@@ -9,7 +9,7 @@ import { mat, PALETA } from '../../style/materials';
 
 const CAPACIDADE_CANECAS = 128;
 const DESLIZE_MS = 800;
-interface Entrega { em: number; origemX: number; destinoX: number }
+interface Entrega { em: number; origemX: number; destinoX: number; tipo: 'dose' | 'agua' }
 
 /** Atende a última chamada enquanto várias canecas podem deslizar ao mesmo tempo. */
 export function Barman() {
@@ -20,11 +20,24 @@ export function Barman() {
   });
   const pedidoX = useRef<number | null>(null);
   const paradoAte = useRef(0);
-  const entregas = useRef<Entrega[]>(Array.from({ length: CAPACIDADE_CANECAS }, () => ({ em: -Infinity, origemX: 0, destinoX: 0 })));
+  const entregas = useRef<Entrega[]>(Array.from({ length: CAPACIDADE_CANECAS }, () => ({ em: -Infinity, origemX: 0, destinoX: 0, tipo: 'dose' })));
   const proxima = useRef(0);
   const ultimo = useRef<typeof servido>(null);
   const corpo = useRef<THREE.InstancedMesh>(null);
   const espuma = useRef<THREE.InstancedMesh>(null);
+  const coposAgua = useRef<THREE.InstancedMesh>(null);
+  const agua = useRef<THREE.InstancedMesh>(null);
+  const geometriaAgua = useMemo(() => new THREE.CylinderGeometry(0.143, 0.118, 0.31, 8).translate(0, 0.18, 0), []);
+  useEffect(() => () => geometriaAgua.dispose(), [geometriaAgua]);
+  const geometriaVidro = useMemo(() => {
+    const lateral = new THREE.CylinderGeometry(0.165, 0.125, 0.44, 8, 1, true).translate(0, 0.22, 0);
+    const fundo = new THREE.CylinderGeometry(0.125, 0.125, 0.025, 8).translate(0, 0.0125, 0);
+    const borda = new THREE.TorusGeometry(0.165, 0.015, 3, 8).rotateX(Math.PI / 2).translate(0, 0.44, 0);
+    const partes = [lateral, fundo, borda].map((g) => g.toNonIndexed());
+    const g = mergeGeometries(partes)!;
+    [...partes, lateral, fundo, borda].forEach((p) => p.dispose()); return g;
+  }, []);
+  useEffect(() => () => geometriaVidro.dispose(), [geometriaVidro]);
   const tmp = useMemo(() => new THREE.Object3D(), []);
   const geometria = useMemo(() => {
     const copo = new THREE.CylinderGeometry(0.17, 0.16, 0.4, 8);
@@ -52,7 +65,7 @@ export function Barman() {
       if (!ponto) return;
       pedidoX.current = ponto.pos[0];
       paradoAte.current = 0;
-      entregas.current[proxima.current] = { em: s.em, origemX: alvo.current.pos.x, destinoX: ponto.pos[0] };
+      entregas.current[proxima.current] = { em: s.em, origemX: alvo.current.pos.x, destinoX: ponto.pos[0], tipo: s.tipo };
       proxima.current = (proxima.current + 1) % CAPACIDADE_CANECAS;
     };
     atender(useMundo.getState().servido);
@@ -79,7 +92,7 @@ export function Barman() {
       if (agora >= paradoAte.current) pedidoX.current = null;
     }
 
-    if (!corpo.current || !espuma.current) return;
+    if (!corpo.current || !espuma.current || !coposAgua.current || !agua.current) return;
     for (let i = 0; i < CAPACIDADE_CANECAS; i++) {
       const e = entregas.current[i];
       const idade = agora - e.em;
@@ -95,23 +108,37 @@ export function Barman() {
       );
       tmp.rotation.set(0, progresso * 1.1, 0);
       tmp.scale.setScalar(escala * 1.7);
+      if (e.tipo === 'agua') tmp.scale.setScalar(0);
       tmp.updateMatrix();
       corpo.current.setMatrixAt(i, tmp.matrix);
       tmp.position.y += 0.415 * escala * 1.7;
       tmp.updateMatrix();
       espuma.current.setMatrixAt(i, tmp.matrix);
+      tmp.position.y -= 0.415 * escala * 1.7;
+      tmp.scale.setScalar(e.tipo === 'agua' ? escala * 1.7 : 0);
+      tmp.updateMatrix();
+      coposAgua.current.setMatrixAt(i, tmp.matrix);
+      agua.current.setMatrixAt(i, tmp.matrix);
     }
     corpo.current.instanceMatrix.needsUpdate = true;
     espuma.current.instanceMatrix.needsUpdate = true;
+    coposAgua.current.instanceMatrix.needsUpdate = true;
+    agua.current.instanceMatrix.needsUpdate = true;
   });
 
   return (
     <group userData={{ dinamico: true }}>
       <Fish aparencia={{ tipo: 'modelo', modelo: 'barman' }} alvo={alvo} nome="Seu Garoupa (barman)" />
-      {/* Duas chamadas de desenho, independentemente da quantidade de doses. */}
+      {/* Quatro chamadas de desenho para todas as bebidas, inclusive água sem alça. */}
       <instancedMesh name="canecas-deslizando" ref={corpo} args={[geometria, mat(PALETA.caneca), CAPACIDADE_CANECAS]} frustumCulled={false} />
       <instancedMesh name="espumas-das-doses" ref={espuma} args={[undefined, mat('#f7f3ea'), CAPACIDADE_CANECAS]} frustumCulled={false}>
         <cylinderGeometry args={[0.165, 0.165, 0.03, 8]} />
+      </instancedMesh>
+      <instancedMesh name='copos-de-agua-deslizando' ref={coposAgua} args={[geometriaVidro, undefined, CAPACIDADE_CANECAS]} frustumCulled={false}>
+        <meshLambertMaterial color='#c1edf0' transparent opacity={0.4} depthWrite={false} side={THREE.DoubleSide} />
+      </instancedMesh>
+      <instancedMesh name='agua-nos-copos' ref={agua} args={[geometriaAgua, undefined, CAPACIDADE_CANECAS]} frustumCulled={false}>
+        <meshLambertMaterial color='#72c8df' transparent opacity={0.72} depthWrite={false} />
       </instancedMesh>
     </group>
   );

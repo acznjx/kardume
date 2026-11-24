@@ -95,6 +95,10 @@ export function Game() {
   const qualidade = useGraficos((s) => s.qualidade);
   const fator = useGraficos((s) => s.fator);
   const [gpuCaiu, setGpuCaiu] = useState(false);
+  const trocouQualidade = useRef(0);
+  useEffect(() => {
+    trocouQualidade.current = performance.now();
+  }, [qualidade]);
 
   useEffect(() => {
     conectar(visitante);
@@ -139,6 +143,8 @@ export function Game() {
             // se a placa de vídeo reiniciar, mostra "recarregar" em vez de deixar a tela morta
             gl.domElement.addEventListener('webglcontextlost', (e) => {
               e.preventDefault();
+              // o próprio jogo descarta o canvas ao trocar a qualidade: isso não é a placa de vídeo caindo
+              if (!gl.domElement.isConnected || performance.now() - trocouQualidade.current < 3000) return;
               setGpuCaiu(true);
             });
           }}

@@ -6,6 +6,8 @@ import { getSocket, local, useMundo } from '../game/mundo';
 import { EMOTES, type Emote } from '@cardume/shared';
 import { useGraficos } from '../game/Efeitos';
 import { Camarim } from './Camarim';
+import { MiraDardos, PainelRadiola, TocandoAgora } from './Javas';
+import { SomRadiola } from './SomRadiola';
 import {
   alternarDanca,
   alternarModo,
@@ -118,6 +120,7 @@ function Ajuda({ fechar }: { fechar: () => void }) {
           <li><kbd>E</kbd>: interagir (portas, balcão, sino, sentar e levantar)</li>
           <li><kbd>1</kbd>–<kbd>5</kbd>: emotes (o 5 é brinde: brinde junto com os amigos!)</li>
           <li><kbd>G</kbd>: dançar (aperte de novo para trocar o passo)</li>
+          <li>No Javas: <b>dardos</b> na linha de arremesso (E), <b>Radiola</b> no palco (E), <kbd>Q</kbd> no balcão pede uma água</li>
           <li><kbd>Enter</kbd>: falar no chat</li>
           <li>Sem o mouse preso: arraste para girar; a câmera volta sozinha para trás do peixe · roda: zoom</li>
         </ul>
@@ -261,6 +264,10 @@ export function Hud() {
       )}
 
       {camarim && !visitante && <Camarim fechar={() => setCamarim(false)} />}
+      <SomRadiola />
+      <TocandoAgora />
+      <MiraDardos />
+      <PainelRadiola />
 
       {ajuda && <Ajuda fechar={fecharAjuda} />}
 

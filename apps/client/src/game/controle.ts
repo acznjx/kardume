@@ -30,7 +30,7 @@ export const destino = { ativo: false, ponto: new THREE.Vector3() };
 /** O mouse está preso ao jogo (câmera segue o mouse)? */
 export const useControle = create<{ travado: boolean }>(() => ({ travado: false }));
 
-export type TipoInteracao = 'porta' | 'dose' | 'sino' | 'garrafa' | 'quadro' | 'sentar';
+export type TipoInteracao = 'porta' | 'dose' | 'sino' | 'garrafa' | 'quadro' | 'dardo' | 'radiola' | 'sentar';
 
 interface InteracaoState {
   tipo: TipoInteracao | null;
@@ -42,8 +42,10 @@ interface InteracaoState {
 export const useInteracao = create<InteracaoState>(() => ({ tipo: null, alvo: null, texto: '', bloqueada: false }));
 
 const NOMES_SALA: Record<RoomId, string> = { navio: 'Voltar para o navio', adega: 'Entrar na adega' };
-const TEXTOS: Record<'dose' | 'sino' | 'garrafa' | 'quadro', string> = {
-  dose: 'Pedir uma dose ao Seu Garoupa (E)',
+const TEXTOS: Record<'dose' | 'sino' | 'garrafa' | 'quadro' | 'dardo' | 'radiola', string> = {
+  dose: 'Pedir uma dose (E) · uma água (Q)',
+  dardo: 'Jogar dardos (E)',
+  radiola: 'Escolher a próxima música na Radiola (E)',
   sino: 'Tocar o sino do navio (E)',
   garrafa: 'Ler a mensagem na garrafa (E)',
   quadro: 'Endireitar o quadro torto (E)',
@@ -158,6 +160,18 @@ export function executarInteracao() {
     case 'quadro':
       avisar('Você endireita o quadro do capitão. Ele entorta de novo assim que você vira as costas.');
       break;
+    case 'dardo': {
+      const n = Number(alvo!.split('-')[1]);
+      soltarMouse();
+      s.emit('dardos_entrar', n, (ok, erro) => {
+        if (!ok && erro) avisar(erro);
+      });
+      break;
+    }
+    case 'radiola':
+      soltarMouse();
+      usePaineis.setState({ radiola: true });
+      break;
     case 'sentar':
       s.emit('sentar', alvo!, (ok, erro) => {
         if (!ok && erro) avisar(erro);
@@ -165,6 +179,30 @@ export function executarInteracao() {
       });
       break;
   }
+}
+
+/** Painéis do HUD abertos (a mira dos dardos abre sozinha quando é a sua vez). */
+export const usePaineis = create<{ radiola: boolean; mirando: boolean }>(() => ({ radiola: false, mirando: false }));
+
+/** Algum painel que toma o teclado está aberto? (o peixe não se mexe enquanto isso) */
+export const painelAberto = () => {
+  const p = usePaineis.getState();
+  return p.radiola || p.mirando;
+};
+
+/** Solta o mouse preso (para usar painéis do HUD). */
+export function soltarMouse() {
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+
+/** Q no balcão: pede uma água (tira uma dose). */
+export function pedirAgua() {
+  const { tipo, alvo } = useInteracao.getState();
+  const s = getSocket();
+  if (tipo !== 'dose' || !alvo || !s) return;
+  s.emit('pedir_agua', alvo, (nivel) => {
+    avisar(nivel > 0 ? 'Seu Garoupa traz um copão de água. Ufa, melhorou um pouco.' : 'Água geladinha. Você está sóbrio como um linguado.');
+  });
 }
 
 export function levantar() {

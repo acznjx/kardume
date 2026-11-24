@@ -8,7 +8,7 @@ export { Madeira } from './Pecas';
 export function MesaCompleta({ x, z }: { x: number; z: number }) {
   const h = ADEGA.alturaMesa;
   return <group>
-    <Tapete x={x} z={z} largura={7} profundidade={7} cor={x > 12 ? '#315f61' : '#8d3839'} />
+    <Tapete x={x} z={z} largura={x > 12 ? 5.4 : 7} profundidade={x > 12 ? 5.4 : 7} cor={x > 12 ? '#315f61' : '#8d3839'} />
     <group position={[x, 0, z]}>
       <Cilindro position={[0, h - 0.13, 0]} raio={ADEGA.raioMesa} altura={0.26} cor={PALETA.madeiraClara} />
       <Cilindro position={[0, 0.8, 0]} raio={0.3} base={0.4} altura={1.6} cor={PALETA.madeira} />

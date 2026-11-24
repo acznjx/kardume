@@ -12,7 +12,7 @@ export interface Assento {
   yaw: number;
 }
 
-export type TipoPonto = 'dose' | 'sino' | 'garrafa' | 'quadro';
+export type TipoPonto = 'dose' | 'sino' | 'garrafa' | 'quadro' | 'dardo' | 'radiola';
 
 export interface PontoInteracao {
   id: string;

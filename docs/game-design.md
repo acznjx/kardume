@@ -72,6 +72,14 @@ As medidas de cada sala vivem em `packages/shared/src/salas/navio.ts` e `salas/a
 - 48 lugares para sentar.
 - Paredes cheias de decoração e poças de luz quente.
 
+**Jogabilidade no Javas (o bar):**
+
+| O quê | Como funciona |
+| --- | --- |
+| Dardos | Dois alvos ("Dardos do Capitão" e "Mira de Tubarão"). Na linha de arremesso, E abre a mira, que oscila; Espaço ou clique arremessa. São 3 dardos por rodada e a pontuação é a de um alvo real (setores, dobro, triplo, 25 e mosca). Todos veem os dardos voarem e cravarem, e o quadro ao lado mostra quem está jogando e os 5 recordes do dia. A bebida treme a mira. O servidor calcula os pontos e só deixa um jogador por alvo. |
+| Radiola das Marés | 7 músicas originais geradas pelo próprio jogo (sem arquivos de áudio): Forró das Ostras, Bossa do Baiacu, Brega da Maré, Lo-fi do Lodo, Samba da Sardinha, Valsa do Polvo e Shanty do Pirata Sem Rumo. No palco, E abre a votação, e a mais votada toca em seguida. Todos no bar ouvem sincronizado; a pista e as luzes pulsam na batida. Volume e mudo ficam no HUD. |
+| Água | Q num ponto do balcão: o Seu Garoupa traz um copo d'água e tira uma dose. |
+
 **Controles:**
 - **Câmera:** clique no aquário e ela segue o mouse (Esc solta). Com o mouse solto, ela volta sozinha para trás do peixe.
 - **Movimento:** nadando, olhar para cima ou para baixo + W sobe ou desce. Shift dá turbo (com rastro de bolhas); Espaço e C sobem e descem.

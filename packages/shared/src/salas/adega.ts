@@ -8,8 +8,8 @@ export const ADEGA = {
   balcao: { x0: -13, x1: 1, z0: -14.2, z1: -12.2, altura: 1.85 },
   pontosDose: [-11, -7.5, -4, -0.5].map((x) => [x, 0, -9.6] as V3),
   banquetasBalcao: [-12, -9.6, -7.2, -4.8, -2.4, 0].map((x) => [x, 1.25, -10.9] as V3),
-  /** Quatro mesas no salão, duas no recanto dos dardos. */
-  mesas: [[-6, -4], [6, -4], [-6, 7], [6, 7], [18, -10], [18, 1]] as const,
+  /** Quatro mesas no salão e duas no recanto dos dardos, entre as raias (quem senta vira plateia). */
+  mesas: [[-6, -4], [6, -4], [-6, 7], [6, 7], [14.6, -4.5], [20.2, -4.5]] as const,
   raioMesa: 1.6,
   raioAssentosMesa: 2.35,
   alturaMesa: 1.78,
@@ -17,6 +17,10 @@ export const ADEGA = {
   pista: { x0: 13.7, x1: 22.7, z0: 6.8, z1: 12.7 },
   palco: { x0: 13.7, x1: 23.2, z0: 14, z1: 17.5, altura: 0.8 },
   dardos: [[23.6, -10], [23.6, 1]] as const,
+  /** linha de arremesso: x onde o peixe fica (o alvo está em x = 23.6, a ~6 unidades) */
+  linhaDardos: 17.4,
+  /** radiola das marés, em cima do palco */
+  radiola: [18.5, 0.8, 16.7] as V3,
   /** Bancos em U, abertos para o corredor lateral (+X). */
   cabines: [-9, 1, 11].map((z) => [-20.6, z] as const),
   entrada: [0, 0, 17.7] as V3,
@@ -42,5 +46,9 @@ export const SALA_ADEGA: DefinicaoSala = {
   porta: { pos: [0, 0, 17.1], raio: 2.5, exigeEmPe: false },
   chegada: [0, 0.9, 13.5],
   assentos: assentosAdega(),
-  interacoes: ADEGA.pontosDose.map((pos, i) => ({ id: `dose-${i}`, sala: 'adega', tipo: 'dose', pos, raio: 1.15 })),
+  interacoes: [
+    ...ADEGA.pontosDose.map((pos, i) => ({ id: `dose-${i}`, sala: 'adega' as const, tipo: 'dose' as const, pos, raio: 1.15 })),
+    ...ADEGA.dardos.map(([, z], i) => ({ id: `dardo-${i}`, sala: 'adega' as const, tipo: 'dardo' as const, pos: [ADEGA.linhaDardos, 0, z] as V3, raio: 1.4 })),
+    { id: 'radiola', sala: 'adega', tipo: 'radiola', pos: [18.5, 0.8, 15], raio: 2.4 },
+  ],
 };

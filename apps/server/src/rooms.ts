@@ -28,6 +28,7 @@ import {
   type ServerToClient,
 } from '@cardume/shared';
 import { COOKIE, aparenciaDe, criarLimitador, type Auth } from './auth';
+import { criarJavas } from './javas';
 
 type Io = Server<ClientToServer, ServerToClient>;
 type Sock = Socket<ClientToServer, ServerToClient>;
@@ -90,6 +91,8 @@ export function criarSalas(io: Io, auth: Auth) {
   const limiteAcao = criarLimitador(8, 4000);
   /** assentoId -> id do jogador sentado */
   const assentos = new Map<string, string>();
+  /** regras do bar: dardos e radiola */
+  const javas = criarJavas(io);
   let numeroVisitante = 1;
 
   const publico = (j: Jogador): JogadorPublico => ({
@@ -130,6 +133,7 @@ export function criarSalas(io: Io, auth: Auth) {
   function entrarNaSala(j: Jogador, sala: RoomId, pos?: readonly number[]) {
     const anterior = j.sala;
     encerrarAcao(j, false);
+    if (anterior === 'adega' && sala !== 'adega') javas.saiu(j);
     j.socket.leave(anterior);
     if (!j.visitante) io.to(anterior).emit('saiu', j.id);
     j.sala = sala;
@@ -146,6 +150,7 @@ export function criarSalas(io: Io, auth: Auth) {
       historico: historico[sala],
     });
     if (!j.visitante) j.socket.to(sala).emit('entrou', publico(j));
+    if (sala === 'adega') javas.enviarEstado(j.socket);
   }
 
   function validarEstado(j: Jogador, e: EstadoJogador): EstadoJogador | null {
@@ -275,10 +280,26 @@ export function criarSalas(io: Io, auth: Auth) {
       }
       j.bebida += 1;
       j.bebidaDesde = Date.now();
-      io.to(j.sala).emit('servido', { id: j.id, pontoId: ponto.id });
+      io.to(j.sala).emit('servido', { id: j.id, pontoId: ponto.id, tipo: 'dose' });
       io.to(j.sala).emit('bebida', { id: j.id, nivel: j.bebida });
       ack(j.bebida);
     });
+
+    socket.on('pedir_agua', (pontoId, ack) => {
+      if (typeof ack !== 'function') return;
+      const ponto = typeof pontoId === 'string' ? INTERACAO_POR_ID.get(pontoId) : undefined;
+      if (j.visitante || !ponto || ponto.tipo !== 'dose' || ponto.sala !== j.sala) return ack(j.bebida);
+      if (!alcanca(pes(j.estado.p), ponto, 1.2)) return ack(j.bebida);
+      io.to(j.sala).emit('servido', { id: j.id, pontoId: ponto.id, tipo: 'agua' });
+      if (j.bebida > 0) {
+        j.bebida -= 1;
+        j.bebidaDesde = Date.now();
+        io.to(j.sala).emit('bebida', { id: j.id, nivel: j.bebida });
+      }
+      ack(j.bebida);
+    });
+
+    javas.registrar(socket, j);
 
     socket.on('tocar_sino', () => {
       const sino = INTERACAO_POR_ID.get('sino')!;
@@ -341,6 +362,7 @@ export function criarSalas(io: Io, auth: Auth) {
 
     socket.on('disconnect', () => {
       encerrarAcao(j, false);
+      if (j.sala === 'adega') javas.saiu(j);
       jogadores.delete(j.id);
       if (!j.visitante) io.to(j.sala).emit('saiu', j.id);
       avisarOnline();

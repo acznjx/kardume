@@ -1,7 +1,8 @@
 ﻿import * as THREE from 'three';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { ALVO, SETORES } from '@cardume/shared';
 import { mat, PALETA } from '../../style/materials';
-import { Cilindro, Corda, Madeira, type Grupo } from './Pecas';
+import { Cilindro, type Grupo } from './Pecas';
 
 /** Vidro com água facetada e silhuetas, sem luz pontual adicional. */
 export function EscotilhaMar({ raio = 1, ...props }: Grupo & { raio?: number }) {
@@ -33,20 +34,38 @@ export function EscotilhaMar({ raio = 1, ...props }: Grupo & { raio?: number }) 
   </group>;
 }
 export function AlvoTaverna(props: Grupo) {
-  const setores = 20;
+  const mapa = useMemo(() => {
+    const tela = document.createElement('canvas'); tela.width = tela.height = 1024;
+    const c = tela.getContext('2d')!;
+    c.translate(512, 512); c.scale(400, -400);
+    c.fillStyle = '#252e2a'; c.beginPath(); c.arc(0, 0, 1.27, 0, Math.PI * 2); c.fill();
+    const passo = Math.PI / 10;
+    SETORES.forEach((numero, i) => {
+      const centro = Math.PI / 2 - i * passo;
+      const a = centro - passo / 2, b = centro + passo / 2;
+      const faixas = [
+        [ALVO.bull, ALVO.trioInterno, i % 2 ? '#ebd9ae' : '#292d29'],
+        [ALVO.trioInterno, ALVO.trioExterno, i % 2 ? '#588875' : '#c35443'],
+        [ALVO.trioExterno, ALVO.duploInterno, i % 2 ? '#ebd9ae' : '#292d29'],
+        [ALVO.duploInterno, 1, i % 2 ? '#588875' : '#c35443'],
+      ] as const;
+      for (const [r0, r1, cor] of faixas) {
+        c.beginPath(); c.arc(0, 0, r1, a, b); c.arc(0, 0, r0, b, a, true); c.closePath();
+        c.fillStyle = cor; c.fill(); c.strokeStyle = '#b5b19a'; c.lineWidth = 0.005; c.stroke();
+      }
+      c.save(); c.translate(Math.cos(centro) * 1.13, Math.sin(centro) * 1.13); c.scale(1, -1);
+      c.font = 'bold 0.105px Georgia'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillStyle = '#f8e6bc'; c.fillText(String(numero), 0, 0); c.restore();
+    });
+    for (const [r, cor] of [[ALVO.bull, '#588875'], [ALVO.mosca, '#c35443']] as const) {
+      c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fillStyle = cor; c.fill();
+      c.strokeStyle = '#b5b19a'; c.lineWidth = 0.005; c.stroke();
+    }
+    const t = new THREE.CanvasTexture(tela); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+  }, []);
+  useEffect(() => () => mapa.dispose(), [mapa]);
   return <group {...props}>
-    <Cilindro position={[0, 0, -0.12]} rotation={[Math.PI / 2, 0, 0]} raio={1.2} altura={0.2} cor={PALETA.madeiraEscura} />
-    {Array.from({ length: setores }, (_, i) => <group key={i}>
-      {[[0.12, 0.5], [0.56, 0.95]].map(([r0, r1]) => <mesh key={r0} material={mat(i % 2 ? '#eee0b7' : '#34332b')}><ringGeometry args={[r0, r1, 1, 1, i * Math.PI * 2 / setores, Math.PI * 2 / setores]} /></mesh>)}
-      {[[0.5, 0.56], [0.95, 1.03]].map(([r0, r1]) => <mesh key={r0} position={[0, 0, 0.005]} material={mat(i % 2 ? '#a74533' : '#4d7950')}><ringGeometry args={[r0, r1, 1, 1, i * Math.PI * 2 / setores, Math.PI * 2 / setores]} /></mesh>)}
-      <Corda de={[Math.sin(i * Math.PI * 2 / setores) * 0.12, Math.cos(i * Math.PI * 2 / setores) * 0.12, 0.018]} para={[Math.sin(i * Math.PI * 2 / setores) * 1.03, Math.cos(i * Math.PI * 2 / setores) * 1.03, 0.018]} raio={0.009} cor='#b7ac8a' />
-    </group>)}
-    <mesh position={[0, 0, 0.01]} material={mat('#a74533')}><circleGeometry args={[0.12, 10]} /></mesh>
-    <mesh position={[0, 0, 0.02]} material={mat('#4d7950')}><circleGeometry args={[0.055, 8]} /></mesh>
-    {[[0.22, 0.35], [-0.4, -0.22], [0.6, 0.1]].map(([x, y], i) => <group key={i} position={[x, y, 0.17]} rotation={[0.12, 0.2, i]}>
-      <Cilindro rotation={[Math.PI / 2, 0, 0]} raio={0.02} altura={0.45} cor={PALETA.latao} />
-      <Madeira position={[0, 0, 0.2]} tamanho={[0.21, 0.045, 0.2]} cor='#c6533e' />
-      <Madeira position={[0, 0, 0.2]} tamanho={[0.045, 0.21, 0.2]} cor='#c6533e' />
-    </group>)}
+    <Cilindro position={[0, 0, -0.12]} rotation={[Math.PI / 2, 0, 0]} raio={1.3} altura={0.2} cor={PALETA.madeiraEscura} />
+    <mesh name='face-do-alvo' position={[0, 0, 0.01]}><circleGeometry args={[1.28, 80]} /><meshLambertMaterial map={mapa} /></mesh>
   </group>;
 }

@@ -6,6 +6,7 @@ import { mat, PALETA } from '../../style/materials';
 import { AlvoTaverna as AlvoDardos, EscotilhaMar as Escotilha } from './Nautica';
 import { BARRIS, CAIXOTES, VASOS } from './medidas';
 import { CanecaTaverna as Caneca, Cilindro, Corda, Madeira, Varal, type Grupo } from './Pecas';
+import { ALTURA_ALVO, ESCALA_ALVO, RECUO_ALVO } from './Dardos3D';
 
 function Retrato({ variante = 0, ...props }: Grupo & { variante?: number }) {
   const cor = ['#e5ad45', '#dc765c', '#8d83b7'][variante % 3];
@@ -100,13 +101,18 @@ export function Decoracao() {
       <Placa texto='Adega do Capitão' largura={2.8} altura={0.45} position={[0, 3.8, 0.4]} />
     </group>
     {ADEGA.dardos.map(([x, z], i) => <group key={z}>
-      <AlvoDardos position={[x, 3.65, z]} rotation={[0, -Math.PI / 2, 0]} scale={1.05} />
-      <Placa texto={i ? 'Mira de Tubarão' : 'Dardos do Capitão'} largura={4.3} altura={0.65} position={[x, 5.6, z]} rotation={[0, -Math.PI / 2, 0]} />
-      <Madeira position={[21.15, 0.055, z]} tamanho={[0.07, 0.025, 3.1]} cor={PALETA.latao} />
+      <Madeira position={[23.53, ALTURA_ALVO, z]} tamanho={[0.82, 2.92, 2.92]} cor='#493c2c' />
+      <Madeira position={[23.53, 3.6, z + 3.25]} tamanho={[0.82, 3.10, 2.65]} cor='#493c2c' />
+      <AlvoDardos position={[x - RECUO_ALVO, ALTURA_ALVO, z]} rotation={[0, -Math.PI / 2, 0]} scale={ESCALA_ALVO} />
+      <Placa texto={i ? 'Mira de Tubarão' : 'Dardos do Capitão'} largura={4.3} altura={0.65} position={[x - RECUO_ALVO, 5.6, z]} rotation={[0, -Math.PI / 2, 0]} />
+      {/* Faixa rente ao piso; nenhuma peça física ocupa as raias. */}
+      <Madeira position={[ADEGA.linhaDardos, 0.045, z]} tamanho={[0.22, 0.025, 2.8]} cor='#e8ce88' />
+      <Madeira position={[ADEGA.linhaDardos - 0.22, 0.04, z]} tamanho={[0.16, 0.02, 2.8]} cor='#315f61' />
+      {[-1, 1].map((lado) => Array.from({ length: 8 }, (_, k) => <Madeira key={`${lado}/${k}`} position={[ADEGA.linhaDardos + 0.45 + k * 0.72, 0.02, z + lado * 1.4]} tamanho={[0.36, 0.012, 0.045]} cor='#c3ad78' />))}
     </group>)}
     <Retrato position={[23.5, 4.2, -14]} rotation={[0, -Math.PI / 2, 0]} />
-    <Boia position={[23.5, 4.4, -5.4]} rotation={[0, -Math.PI / 2, 0]} />
-    <Espadarte position={[23.5, 5.2, 6.3]} rotation={[0, -Math.PI / 2, 0]} />
+    <Boia position={[23.5, 4.4, -3.8]} rotation={[0, -Math.PI / 2, 0]} />
+    <Espadarte position={[23.5, 6.2, 6.3]} rotation={[0, -Math.PI / 2, 0]} />
     <Rede position={[23.5, 4.2, 11]} rotation={[0, -Math.PI / 2, 0]} />
     <Retrato position={[23.5, 4.8, 15.5]} rotation={[0, -Math.PI / 2, 0]} variante={2} />
     {[-14.4, -4, 6, 15.8].map((z, i) => <group key={z} position={[-23.5, 4.4, z]} rotation={[0, Math.PI / 2, 0]}>
