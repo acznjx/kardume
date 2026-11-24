@@ -36,7 +36,7 @@ function Prateleiras() {
       })}
     </group>)}
     <Madeira position={[-6, 5.9, -17.1]} tamanho={[15.2, 0.35, 1.4]} />
-    <Placa texto='BAR DO CARDUME' fonte='Arial Black' largura={13.5} altura={1.35} position={[-6, 6.75, -16.85]} />
+    <Placa texto='JAVAS' fonte='Arial Black' largura={8.5} altura={1.6} position={[-6, 6.75, -16.85]} />
     <Placa texto='Fiado só com Anzol Reconhecido' largura={8.2} altura={0.6} position={[-6, 0.9, -11.94]} />
   </group>;
 }

@@ -113,7 +113,7 @@ function Arquibancada({ raio, altura, cor }: { raio: number; altura: number; cor
     <mesh position={[0, 2.2, -1.4]} material={mat('#d49a48', { emissivo: '#e99735', intensidade: 0.65 })}><planeGeometry args={[3.6, 4.4]} /></mesh>
     <Caixa pos={[0, 0.22, 0.1]} tam={[4.5, 0.35, 2.8]} cor={CORES.clara} />
     <Caixa pos={[0, 4.8, 0.3]} tam={[5.8, 0.5, 1]} cor={CORES.escura} />
-    <Placa texto="ADEGA · BAR DO CARDUME" largura={8.2} altura={1.1} position={[0, 6.6, 3.1]} rotation={[0, 0, -0.025]} />
+    <Placa texto="JAVAS" fonte="Arial Black" largura={6.4} altura={1.7} position={[0, 6.8, 3.1]} rotation={[0, 0, -0.025]} />
     <Placa texto="só entra em pé!" fonte="Caveat" largura={3} altura={0.75} position={[4.6, 2.5, 3.5]} rotation={[0, -0.2, 0.09]} />
     <Caixote position={[-7, 0, 5]} /><Lanterna poste position={[7, 0, 7]} />
     <Bandeirinhas a={[-7, 8, 1]} b={[7, 8, 1]} />
