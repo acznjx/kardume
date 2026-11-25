@@ -1,4 +1,5 @@
 import type { RoomId } from './constants';
+import type { Roupa } from './roupa';
 
 export type Modo = 'nadando' | 'empe';
 
@@ -7,8 +8,8 @@ export type ModeloPeixe = (typeof MODELOS_PEIXE)[number];
 
 /** Aparência do peixe: desenho do jogador (PNG + contorno simplificado) ou modelo pronto. */
 export type Aparencia =
-  | { tipo: 'desenho'; png: string; contorno: [number, number][] }
-  | { tipo: 'modelo'; modelo: ModeloPeixe };
+  | { tipo: 'desenho'; png: string; contorno: [number, number][]; roupa?: Roupa }
+  | { tipo: 'modelo'; modelo: ModeloPeixe; roupa?: Roupa };
 
 export interface EstadoJogador {
   /** posição x, y, z */
@@ -51,6 +52,11 @@ export interface UsuarioMe {
   id: number;
   username: string;
   aparencia: Aparencia | null;
+  /** e-mail opcional (para recuperar a conta no futuro) */
+  email: string | null;
+  roupa: Roupa;
+  /** quando a conta foi criada (ms) */
+  criadoEm: number;
 }
 
 // ---- eventos Socket.IO ----
@@ -70,6 +76,8 @@ export interface ServerToClient {
   chat: (m: MensagemChat) => void;
   bebida: (d: { id: string; nivel: number }) => void;
   aparencia: (d: { id: string; aparencia: Aparencia }) => void;
+  /** o jogador trocou o nome no perfil */
+  perfil: (d: { id: string; nome: string }) => void;
   sino: (d: { id: string }) => void;
   acao: (d: { id: string; acao: Acao | null }) => void;
   emote: (d: { id: string; tipo: Emote }) => void;

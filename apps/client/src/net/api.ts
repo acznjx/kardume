@@ -1,4 +1,4 @@
-import type { UsuarioMe } from '@cardume/shared';
+import type { Roupa, UsuarioMe } from '@cardume/shared';
 
 async function req<T>(metodo: string, url: string, corpo?: unknown): Promise<T> {
   const r = await fetch(url, {
@@ -23,4 +23,7 @@ export const api = {
   salvarDesenho: (png: string, contorno: [number, number][]) =>
     req<UsuarioMe>('PUT', '/api/me/fish', { tipo: 'desenho', png, contorno }),
   salvarModelo: (modelo: string) => req<UsuarioMe>('PUT', '/api/me/fish', { tipo: 'modelo', modelo }),
+  salvarRoupa: (roupa: Roupa) => req<UsuarioMe>('PUT', '/api/me/roupa', { roupa }),
+  salvarPerfil: (dados: { username?: string; email?: string }) => req<UsuarioMe>('PATCH', '/api/me/perfil', dados),
+  trocarSenha: (atual: string, nova: string) => req<{ ok: true }>('PUT', '/api/me/senha', { atual, nova }),
 };

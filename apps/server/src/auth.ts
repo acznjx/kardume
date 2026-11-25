@@ -2,11 +2,15 @@ import { createHash, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
+  EMAIL_REGEX,
   LIMITES,
   MODELOS_PEIXE,
+  ROUPA_PADRAO,
   USERNAME_REGEX,
+  normalizarRoupa,
   type Aparencia,
   type ModeloPeixe,
+  type Roupa,
   type UsuarioMe,
 } from '@cardume/shared';
 import type { DB, UserRow } from './db';
@@ -21,12 +25,24 @@ const UM_DIA = 24 * 60 * 60 * 1000;
 const HASH_FALSO = bcrypt.hashSync('peixe-que-nao-existe', 10);
 const hashToken =(t: string) => createHash('sha256').update(t).digest('hex');
 
-export function aparenciaDe(u: Pick<UserRow, 'id' | 'fish_png' | 'fish_contorno' | 'fish_modelo' | 'fish_versao'>): Aparencia | null {
+export function roupaDe(u: Pick<UserRow, 'roupa'>): Roupa {
+  if (!u.roupa) return ROUPA_PADRAO;
+  try {
+    return normalizarRoupa(JSON.parse(u.roupa)) ?? ROUPA_PADRAO;
+  } catch {
+    return ROUPA_PADRAO;
+  }
+}
+
+export function aparenciaDe(
+  u: Pick<UserRow, 'id' | 'fish_png' | 'fish_contorno' | 'fish_modelo' | 'fish_versao' | 'roupa'>,
+): Aparencia | null {
+  const roupa = roupaDe(u);
   if (u.fish_png && u.fish_contorno) {
-    return { tipo: 'desenho', png: `/api/peixe/${u.id}.png?v=${u.fish_versao}`, contorno: JSON.parse(u.fish_contorno) };
+    return { tipo: 'desenho', png: `/api/peixe/${u.id}.png?v=${u.fish_versao}`, contorno: JSON.parse(u.fish_contorno), roupa };
   }
   if (u.fish_modelo && (MODELOS_PEIXE as readonly string[]).includes(u.fish_modelo)) {
-    return { tipo: 'modelo', modelo: u.fish_modelo as ModeloPeixe };
+    return { tipo: 'modelo', modelo: u.fish_modelo as ModeloPeixe, roupa };
   }
   return null;
 }
@@ -65,13 +81,26 @@ export function criarAuth(db: DB) {
     salvarModelo: db.prepare(
       'UPDATE users SET fish_png = NULL, fish_contorno = NULL, fish_modelo = ?, fish_versao = fish_versao + 1 WHERE id = ?',
     ),
+    salvarRoupa: db.prepare('UPDATE users SET roupa = ? WHERE id = ?'),
+    salvarNome: db.prepare('UPDATE users SET username = ? WHERE id = ?'),
+    salvarEmail: db.prepare('UPDATE users SET email = ? WHERE id = ?'),
+    porEmail: db.prepare('SELECT id FROM users WHERE email = ? COLLATE NOCASE'),
+    salvarSenha: db.prepare('UPDATE users SET senha_hash = ? WHERE id = ?'),
+    apagarOutrasSessoes: db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?'),
   };
 
-  function validarCredenciais(username: unknown, senha: unknown): string | null {
-    if (typeof username !== 'string' || typeof senha !== 'string') return 'Preencha usuário e senha.';
+  function validarNome(username: unknown): string | null {
+    if (typeof username !== 'string') return 'Escolha um nome para o peixe.';
     if (username.length < LIMITES.usernameMin || username.length > LIMITES.usernameMax)
       return `O nome do peixe precisa ter de ${LIMITES.usernameMin} a ${LIMITES.usernameMax} caracteres.`;
     if (!USERNAME_REGEX.test(username)) return 'Use só letras, números, ponto, hífen ou _ no nome.';
+    return null;
+  }
+
+  function validarCredenciais(username: unknown, senha: unknown): string | null {
+    if (typeof username !== 'string' || typeof senha !== 'string') return 'Preencha usuário e senha.';
+    const erroNome = validarNome(username);
+    if (erroNome) return erroNome;
     if (senha.length < LIMITES.senhaMin) return `A senha precisa ter pelo menos ${LIMITES.senhaMin} caracteres.`;
     if (senha.length > 200) return 'Senha longa demais.';
     return null;
@@ -109,7 +138,14 @@ export function criarAuth(db: DB) {
   }
 
   function me(u: UserRow): UsuarioMe {
-    return { id: u.id, username: u.username, aparencia: aparenciaDe(u) };
+    return {
+      id: u.id,
+      username: u.username,
+      aparencia: aparenciaDe(u),
+      email: u.email ?? null,
+      roupa: roupaDe(u),
+      criadoEm: u.created_at,
+    };
   }
 
   function porId(id: number) {
@@ -118,7 +154,7 @@ export function criarAuth(db: DB) {
 
   setInterval(() => stmts.limparSessoes.run(Date.now()), 60 * 60 * 1000).unref();
 
-  return { validarCredenciais, registrar, verificar, criarSessao, usuarioDoToken, encerrarSessao, me, porId, stmts };
+  return { validarCredenciais, validarNome, registrar, verificar, criarSessao, usuarioDoToken, encerrarSessao, me, porId, stmts, hashToken };
 }
 
 export type Auth = ReturnType<typeof criarAuth>;
@@ -152,11 +188,18 @@ function validarContorno(c: unknown): c is [number, number][] {
 export function rotasAuth(
   app: FastifyInstance,
   auth: Auth,
-  eventos: { aoMudarAparencia: (userId: number) => void; aoSair: (token: string) => void },
+  eventos: {
+    aoMudarAparencia: (userId: number) => void;
+    aoMudarNome: (userId: number) => void;
+    aoSair: (token: string) => void;
+  },
 ) {
   const limiteLogin = criarLimitador(10, 60_000);
   const limiteLoginGlobal = criarLimitador(120, 60_000);
   const limiteAparencia = criarLimitador(6, 60_000);
+  const limiteRoupa = criarLimitador(20, 60_000);
+  const limitePerfil = criarLimitador(8, 60_000);
+  const limiteSenha = criarLimitador(5, 10 * 60_000);
   const producao = process.env.NODE_ENV === 'production';
 
   const definirCookie = (reply: FastifyReply, token: string, expira: number, lembrar: boolean) => {
@@ -240,6 +283,73 @@ export function rotasAuth(
     }
     eventos.aoMudarAparencia(u.id);
     return auth.me(auth.porId(u.id)!);
+  });
+
+  // ---- roupeiro ----
+  app.put('/api/me/roupa', async (req, reply) => {
+    const u = exigirUsuario(req, reply);
+    if (!u) return;
+    if (!limiteRoupa(String(u.id))) return reply.code(429).send({ erro: 'Muitas trocas de roupa. Respira um pouco.' });
+    const roupa = normalizarRoupa((req.body as Record<string, unknown> | undefined)?.roupa);
+    if (!roupa) return reply.code(400).send({ erro: 'Roupa inválida.' });
+    auth.stmts.salvarRoupa.run(JSON.stringify(roupa), u.id);
+    eventos.aoMudarAparencia(u.id);
+    return auth.me(auth.porId(u.id)!);
+  });
+
+  // ---- perfil: nome e e-mail ----
+  app.patch('/api/me/perfil', async (req, reply) => {
+    const u = exigirUsuario(req, reply);
+    if (!u) return;
+    if (!limitePerfil(String(u.id))) return reply.code(429).send({ erro: 'Calma, peixe! Tente de novo em um minuto.' });
+    const body = (req.body ?? {}) as Record<string, unknown>;
+
+    let novoNome: string | null = null;
+    if (body.username !== undefined) {
+      const nome = typeof body.username === 'string' ? body.username.trim() : body.username;
+      const erro = auth.validarNome(nome);
+      if (erro) return reply.code(400).send({ erro });
+      const n = nome as string;
+      if (n !== u.username) {
+        const dono = auth.stmts.porNome.get(n) as unknown as UserRow | undefined;
+        if (dono && dono.id !== u.id) return reply.code(409).send({ erro: 'Já existe um peixe com esse nome.' });
+        novoNome = n;
+      }
+    }
+
+    let novoEmail: string | null | undefined;
+    if (body.email !== undefined) {
+      const e = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+      if (e === '') novoEmail = null;
+      else {
+        if (e.length > 254 || !EMAIL_REGEX.test(e)) return reply.code(400).send({ erro: 'Esse e-mail não parece válido.' });
+        const dono = auth.stmts.porEmail.get(e) as { id: number } | undefined;
+        if (dono && dono.id !== u.id) return reply.code(409).send({ erro: 'Esse e-mail já está em outra conta.' });
+        novoEmail = e;
+      }
+    }
+
+    if (novoNome) auth.stmts.salvarNome.run(novoNome, u.id);
+    if (novoEmail !== undefined) auth.stmts.salvarEmail.run(novoEmail, u.id);
+    if (novoNome) eventos.aoMudarNome(u.id);
+    return auth.me(auth.porId(u.id)!);
+  });
+
+  // ---- trocar senha ----
+  app.put('/api/me/senha', async (req, reply) => {
+    const u = exigirUsuario(req, reply);
+    if (!u) return;
+    if (!limiteSenha(String(u.id))) return reply.code(429).send({ erro: 'Muitas tentativas. Espere alguns minutos.' });
+    const { atual, nova } = (req.body ?? {}) as Record<string, unknown>;
+    if (typeof atual !== 'string' || typeof nova !== 'string' || !atual)
+      return reply.code(400).send({ erro: 'Preencha a senha atual e a nova.' });
+    if (nova.length < LIMITES.senhaMin) return reply.code(400).send({ erro: `A senha nova precisa ter pelo menos ${LIMITES.senhaMin} caracteres.` });
+    if (nova.length > 200) return reply.code(400).send({ erro: 'Senha longa demais.' });
+    if (!(await bcrypt.compare(atual, u.senha_hash))) return reply.code(401).send({ erro: 'A senha atual não confere.' });
+    auth.stmts.salvarSenha.run(await bcrypt.hash(nova, 10), u.id);
+    // derruba as outras sessões (outros aparelhos); esta continua
+    auth.stmts.apagarOutrasSessoes.run(u.id, auth.hashToken(req.cookies[COOKIE]!));
+    return { ok: true };
   });
 
   app.get('/api/peixe/:arquivo', async (req, reply) => {
