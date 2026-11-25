@@ -180,7 +180,7 @@ export function rotasAuth(
     const { username, senha, maior18, lembrar } = (req.body ?? {}) as Record<string, unknown>;
     const erro = auth.validarCredenciais(username, senha);
     if (erro) return reply.code(400).send({ erro });
-    if (maior18 !== true) return reply.code(400).send({ erro: 'O Cardume é só para maiores de 18 anos.' });
+    if (maior18 !== true) return reply.code(400).send({ erro: 'O Kardume é só para maiores de 18 anos.' });
     if (auth.stmts.porNome.get(username as string))
       return reply.code(409).send({ erro: 'Já existe um peixe com esse nome.' });
     const u = await auth.registrar(username as string, senha as string);

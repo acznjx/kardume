@@ -107,7 +107,7 @@ function Ajuda({ fechar }: { fechar: () => void }) {
   return (
     <div className="hud-ajuda" onClick={fechar}>
       <div onClick={(e) => e.stopPropagation()}>
-        <h3>Como nadar no Cardume</h3>
+        <h3>Como nadar no Kardume</h3>
         <ul>
           <li><b>Clique no aquário</b>: a câmera passa a seguir o mouse (<kbd>Esc</kbd> solta)</li>
           <li><kbd>W A S D</kbd> ou setas: nadar para onde a câmera olha · <kbd>Shift</kbd>: turbo</li>

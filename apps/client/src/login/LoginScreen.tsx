@@ -6,7 +6,7 @@ import { FishSticker } from './FishSticker';
 import './login.css';
 
 const LETRAS: { l: string; cor: string; fonte: string; rot: number; y: number; italico?: boolean }[] = [
-  { l: 'C', cor: 'creme', fonte: "'DM Serif Display', serif", rot: -3.5, y: 0 },
+  { l: 'K', cor: 'creme', fonte: "'DM Serif Display', serif", rot: -3.5, y: 0 },
   { l: 'A', cor: 'coral', fonte: "'Abril Fatface', serif", rot: 3, y: 2, italico: true },
   { l: 'R', cor: 'preto', fonte: "'Alfa Slab One', serif", rot: -2, y: 4 },
   { l: 'D', cor: 'kraft', fonte: "'DM Serif Display', serif", rot: 4.5, y: -1, italico: true },
@@ -91,7 +91,7 @@ export function LoginScreen() {
     setErro(null);
     if (aba === 'novo') {
       if (senha !== senha2) return setErro('As senhas não batem.');
-      if (!maior18) return setErro('O Cardume é só para maiores de 18 anos.');
+      if (!maior18) return setErro('O Kardume é só para maiores de 18 anos.');
     }
     setEnviando(true);
     try {
@@ -186,7 +186,7 @@ export function LoginScreen() {
         </span>
 
         {/* logo */}
-        <h1 className="lg-logo" aria-label="Cardume">
+        <h1 className="lg-logo" aria-label="Kardume">
           {LETRAS.map((x, i) => (
             <span
               key={i}
@@ -202,7 +202,7 @@ export function LoginScreen() {
             </span>
           ))}
         </h1>
-        <div className="lg-sub">um aquário social · beta fechado</div>
+        <div className="lg-sub">bons peixes, maus hábitos</div>
 
         {/* carteirinha */}
         <form className={`lg-cartao ${aba === 'novo' ? 'lg-cartao--novo' : ''}`} onSubmit={enviar} onChange={() => setErro(null)}>
@@ -302,7 +302,7 @@ export function LoginScreen() {
         </span>
         <div className="lg-rodape__dir">
           <span className="lg-caixa">v0.0.1 · protótipo</span>
-          <span>© 2026 Cardume</span>
+          <span>© 2026 Kardume</span>
         </div>
       </div>
 
@@ -310,7 +310,7 @@ export function LoginScreen() {
         <div className="lg-modal" onClick={() => setModal(false)}>
           <div onClick={(e) => e.stopPropagation()}>
             <p style={{ marginTop: 0 }}>
-              A recuperação de senha ainda está sendo construída pelos castores-do-mar. Fale com a gerência do Cardume
+              A recuperação de senha ainda está sendo construída pelos castores-do-mar. Fale com a gerência do Kardume
               para trocar sua senha.
             </p>
             <button className="lg-botao" onClick={() => setModal(false)}>
