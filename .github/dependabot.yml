@@ -1,13 +1,19 @@
-# Atualizações de segurança das dependências (npm) toda semana, em PRs separados.
+# Atualizações automáticas das dependências (npm), uma vez por semana.
+# Só abre PR de versões menores e correções (minor/patch). Versões principais
+# (ex.: React 18 → 19, TypeScript 5 → 7) quebram coisas e o time atualiza na mão, testando.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: 'deps'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
-      react-three:
-        patterns: ['@react-three/*', 'three', '@types/three']
-      fontes:
-        patterns: ['@fontsource/*']
+      # junta tudo num PR só por semana, em vez de um PR por pacote
+      dependencias:
+        patterns: ['*']
