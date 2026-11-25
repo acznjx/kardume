@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { AddressInfo } from 'node:net';
 import { io as conectar, type Socket } from 'socket.io-client';
-import { ASSENTO_POR_ID, type ClientToServer, type EstadoJogador, type ServerToClient } from '@cardume/shared';
+import { ASSENTO_POR_ID, FAIXAS, INTERACAO_POR_ID, PORTAS, type ClientToServer, type EstadoJogador, type ServerToClient } from '@cardume/shared';
 import { criarServidor } from './app';
 
 process.env.LOG_LEVEL = 'silent';
@@ -108,4 +108,61 @@ describe('ações sociais', () => {
     const nivel = await new Promise<number>((ok) => e.s.emit('pedir_dose', 'dose-0', ok));
     expect(nivel).toBe(0);
   });
+});
+
+/** Leva o jogador até a porta da adega (em pé) e entra. */
+async function entrarNaAdega(j: { s: Cli; estado: EstadoJogador }) {
+  const porta = PORTAS.navio.pos;
+  await nadarAte(j, [porta[0], 1.1, porta[2] + 1]);
+  const boas = new Promise<Parameters<ServerToClient['boas_vindas']>[0]>((ok) => j.s.once('boas_vindas', ok));
+  const r = await new Promise<[boolean, string?]>((ok) => j.s.emit('trocar_sala', 'adega', (...x) => ok(x)));
+  expect(r[0]).toBe(true);
+  j.estado = (await boas).estado;
+}
+
+describe('Javas: dardos e radiola', () => {
+  it('um jogador por alvo, três dardos, recorde no placar', async () => {
+    const a = await jogador('dardo_ana');
+    const b = await jogador('dardo_bia');
+    await entrarNaAdega(a);
+    await entrarNaAdega(b);
+    const linha = INTERACAO_POR_ID.get('dardo-0')!.pos;
+    await nadarAte(a, [linha[0], 1.1, linha[2]]);
+    await nadarAte(b, [linha[0], 1.1, linha[2] + 0.8]);
+
+    const entrou = await new Promise<[boolean, string?]>((ok) => a.s.emit('dardos_entrar', 0, (...x) => ok(x)));
+    expect(entrou[0]).toBe(true);
+    const ocupado = await new Promise<[boolean, string?]>((ok) => b.s.emit('dardos_entrar', 0, (...x) => ok(x)));
+    expect(ocupado[0]).toBe(false);
+    expect(ocupado[1]).toContain('dardo_ana');
+
+    const dardos: Parameters<ServerToClient['dardo']>[0][] = [];
+    b.s.on('dardo', (d) => dardos.push(d));
+    const placar = new Promise<Parameters<ServerToClient['dardos_placar']>[0]>((ok) => b.s.once('dardos_placar', ok));
+    await espera(1000); // contagem regressiva
+    for (let i = 0; i < 3; i++) {
+      a.s.emit('dardos_arremessar', 1.1 + i * 0.5);
+      await espera(520);
+    }
+    await espera(200);
+    expect(dardos.length).toBe(3);
+    expect(dardos[2].restam).toBe(0);
+    const total = dardos.reduce((s, d) => s + d.acerto.pontos, 0);
+    expect(dardos[2].total).toBe(total);
+    const p = await placar;
+    expect(p.recordes[0]).toEqual({ nome: 'dardo_ana', pontos: total });
+  }, 40_000);
+
+  it('votos na radiola chegam a todos', async () => {
+    const c = await jogador('radio_caio');
+    await entrarNaAdega(c);
+    const faixa = FAIXAS[2].id;
+    const ev = new Promise<Parameters<ServerToClient['radiola']>[0]>((ok) => {
+      c.s.on('radiola', (e) => {
+        if (e.votos[faixa]) ok(e);
+      });
+    });
+    c.s.emit('radiola_votar', faixa);
+    expect((await ev).votos[faixa]).toBe(1);
+  }, 30_000);
 });

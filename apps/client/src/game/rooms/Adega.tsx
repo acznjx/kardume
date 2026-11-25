@@ -6,6 +6,7 @@ import { Cabines } from './adega/Cabines';
 import { Casco, Decoracao, Iluminacao } from './adega/Ambiente';
 import { Mesas, Banquetas } from './adega/Mobiliario';
 import { Palco, Pista } from './adega/Pista';
+import { Dardos3D } from './adega/Dardos3D';
 
 export { COLISAO_ADEGA } from './adega/colisao';
 
@@ -23,6 +24,7 @@ export function Adega() {
       </CoresSolidas>
     </Estatico>
     <Pista />
+    <Dardos3D />
     <Barman />
   </group>;
 }

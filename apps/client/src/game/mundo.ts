@@ -5,9 +5,12 @@ import {
   ASSENTO_POR_ID,
   LIMITES,
   ROOMS,
+  type AcertoDardo,
   type Acao,
   type Aparencia,
   type Emote,
+  type EstadoAlvo,
+  type Recorde,
   type ClientToServer,
   type EstadoJogador,
   type MensagemChat,
@@ -58,9 +61,20 @@ interface MundoState {
   /** peixes que acabaram de participar de um brinde coletivo */
   brindes: Record<string, number>;
   /** última dose servida (para o barman e a caneca deslizando) */
-  servido: { id: string; pontoId: string; em: number } | null;
+  servido: { id: string; pontoId: string; tipo: 'dose' | 'agua'; em: number } | null;
   /** ação do próprio jogador (sentado, dançando) */
   minhaAcao: Acao | null;
+  /** ---- Javas ---- */
+  /** estado dos 2 alvos de dardos (quem joga, dardos cravados, semente/início da mira) */
+  dardos: EstadoAlvo[];
+  /** recordes do dia por alvo */
+  placares: Recorde[][];
+  /** último arremesso (para o 3D animar o voo e a pontuação); `em` = performance.now() */
+  ultimoDardo: { alvo: number; id: string; acerto: AcertoDardo; total: number; restam: number; em: number } | null;
+  /** radiola: faixa, início no relógio LOCAL (ms, Date.now) e votos para a próxima */
+  radiola: { faixa: string; inicioLocal: number; votos: Record<string, number> } | null;
+  /** diferença relógio do servidor − relógio local (ms) */
+  offsetRelogio: number;
 }
 
 export const useMundo = create<MundoState>(() => ({
@@ -80,7 +94,17 @@ export const useMundo = create<MundoState>(() => ({
   brindes: {},
   servido: null,
   minhaAcao: null,
+  dardos: [],
+  placares: [[], []],
+  ultimoDardo: null,
+  radiola: null,
+  offsetRelogio: 0,
 }));
+
+/** Agora no relógio do servidor (ms). */
+export function agoraServidor() {
+  return Date.now() + useMundo.getState().offsetRelogio;
+}
 
 /** Assentos ocupados por outros peixes na sala atual. */
 export function assentosOcupados() {
@@ -213,6 +237,9 @@ export function conectar(visitante: boolean) {
       brindes: {},
       servido: null,
       minhaAcao: null,
+      dardos: [],
+      ultimoDardo: null,
+      radiola: sala === 'adega' ? st.radiola : null,
       entrada: st.entrada + 1,
     }));
   });
@@ -285,7 +312,26 @@ export function conectar(visitante: boolean) {
       return { brindes };
     }),
   );
-  s.on('servido', ({ id, pontoId }) => useMundo.setState({ servido: { id, pontoId, em: performance.now() } }));
+  s.on('servido', ({ id, pontoId, tipo }) => useMundo.setState({ servido: { id, pontoId, tipo, em: performance.now() } }));
+  s.on('dardos_estado', (e) => {
+    const dardos = [...useMundo.getState().dardos];
+    dardos[e.alvo] = e;
+    useMundo.setState({ dardos });
+  });
+  s.on('dardo', ({ alvo, id, acerto, total, restam }) => {
+    const dardos = [...useMundo.getState().dardos];
+    if (dardos[alvo]) dardos[alvo] = { ...dardos[alvo], dardos: [...dardos[alvo].dardos, acerto] };
+    useMundo.setState({ dardos, ultimoDardo: { alvo, id, acerto, total, restam, em: performance.now() } });
+  });
+  s.on('dardos_placar', ({ alvo, recordes }) => {
+    const placares = [...useMundo.getState().placares];
+    placares[alvo] = recordes;
+    useMundo.setState({ placares });
+  });
+  s.on('radiola', ({ faixa, inicio, votos, agora }) => {
+    const offsetRelogio = agora - Date.now();
+    useMundo.setState({ offsetRelogio, radiola: { faixa, inicioLocal: inicio - offsetRelogio, votos } });
+  });
   s.on('online', (n) => useMundo.setState({ online: n }));
   s.on('aviso', (texto) => {
     ultimoAviso = texto;
@@ -328,6 +374,10 @@ export function desconectar() {
     brindes: {},
     servido: null,
     minhaAcao: null,
+    dardos: [],
+    placares: [[], []],
+    ultimoDardo: null,
+    radiola: null,
   });
 }
 

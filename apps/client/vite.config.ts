@@ -14,9 +14,11 @@ export default defineConfig({
     host: true,
     // CSP de desenvolvimento: libera inline/eval só para o React Refresh do Vite
     headers: cabecalhosSeguranca({ producao: false, https: false }),
+    // changeOrigin: false preserva o Host da página (localhost:5173): a checagem de origem do servidor
+    // compara Origin com Host, e com o Host trocado para :3000 todo POST/WebSocket seria recusado no dev
     proxy: {
-      '/api': API,
-      '/socket.io': { target: API, ws: true },
+      '/api': { target: API, changeOrigin: false },
+      '/socket.io': { target: API, ws: true, changeOrigin: false },
     },
   },
   // `vite preview` simula o build final, então usa a política de produção (sem HSTS, que exige HTTPS)

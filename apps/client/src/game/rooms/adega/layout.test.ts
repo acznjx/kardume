@@ -21,11 +21,27 @@ describe('contrato da Adega', () => {
     }
   });
   it('mantém quatro doses alcançáveis sem tomar a interação das banquetas', () => {
-    expect(SALA_ADEGA.interacoes.map((p) => p.id)).toEqual(['dose-0', 'dose-1', 'dose-2', 'dose-3']);
-    for (const p of SALA_ADEGA.interacoes) {
+    const doses = SALA_ADEGA.interacoes.filter((p) => p.tipo === 'dose');
+    expect(doses.map((p) => p.id)).toEqual(['dose-0', 'dose-1', 'dose-2', 'dose-3']);
+    for (const p of doses) {
       expect(p.pos[2]).toBeGreaterThan(ADEGA.balcao.z1);
       for (const a of SALA_ADEGA.assentos.filter((s) => s.id.startsWith('balcao'))) {
         expect(Math.hypot(p.pos[0] - a.pos[0], p.pos[2] - a.pos[2])).toBeGreaterThan(p.raio);
+      }
+    }
+  });
+  it('mantém as duas raias sem móveis entre a linha e os alvos', () => {
+    const pontos = SALA_ADEGA.interacoes.filter((p) => p.tipo === 'dardo');
+    expect(pontos.map((p) => p.id)).toEqual(['dardo-0', 'dardo-1']);
+    for (const [i, [x, z]] of ADEGA.dardos.entries()) {
+      expect(pontos[i].pos).toEqual([ADEGA.linhaDardos, 0, z]);
+      for (const c of COLISAO_ADEGA.circulos) {
+        const px = Math.max(ADEGA.linhaDardos, Math.min(x, c.x));
+        const pz = Math.max(z - 1.4, Math.min(z + 1.4, c.z));
+        expect(Math.hypot(c.x - px, c.z - pz)).toBeGreaterThan(c.r);
+      }
+      for (const b of COLISAO_ADEGA.caixas) {
+        expect(b.max[0] < ADEGA.linhaDardos || b.min[0] > x || b.max[1] < z - 1.4 || b.min[1] > z + 1.4).toBe(true);
       }
     }
   });

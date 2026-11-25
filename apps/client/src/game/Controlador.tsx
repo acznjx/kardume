@@ -12,6 +12,8 @@ import {
   executarInteracao,
   fazerEmote,
   levantar,
+  painelAberto,
+  pedirAgua,
   teclas,
   useControle,
 } from './controle';
@@ -92,12 +94,17 @@ export function Controlador({ sala, colisao, visitante }: { sala: RoomId; colisa
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (ehCampoTexto(e.target)) return;
+      if (painelAberto()) {
+        teclas.clear();
+        return;
+      }
       const k = e.key.toLowerCase();
       if (k === ' ' || k.startsWith('arrow')) e.preventDefault();
       if (visitante) return;
       if (k === 'f' && !e.repeat) alternarModo();
       if (k === 'e' && !e.repeat) executarInteracao();
       if (k === 'g' && !e.repeat) alternarDanca();
+      if (k === 'q' && !e.repeat) pedirAgua();
       const n = Number(k);
       if (n >= 1 && n <= EMOTES.length && !e.repeat) fazerEmote(EMOTES[n - 1]);
       teclas.add(k);

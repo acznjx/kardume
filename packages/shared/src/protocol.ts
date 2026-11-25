@@ -48,6 +48,41 @@ export interface MensagemChat {
   em: number;
 }
 
+/** Um dardo cravado: posição no alvo (raio 1 = borda do anel duplo) e o que valeu. */
+export interface AcertoDardo {
+  x: number;
+  y: number;
+  pontos: number;
+  rotulo: string;
+}
+
+/** Estado de um alvo de dardos (0 ou 1). `jogador` null = livre; os dardos da última rodada ficam cravados. */
+export interface EstadoAlvo {
+  alvo: number;
+  jogador: string | null;
+  nome: string | null;
+  dardos: AcertoDardo[];
+  /** semente e início (relógio do servidor, ms) da mira oscilante: ver miraEm() em dardos.ts */
+  semente: number;
+  inicio: number;
+  /** bebida do jogador no começo da rodada (deixa a mira mais tremida) */
+  bebida: number;
+}
+
+export interface Recorde {
+  nome: string;
+  pontos: number;
+}
+
+/** Radiola das Marés: faixa tocando, início (relógio do servidor, ms) e votos para a próxima. */
+export interface EstadoRadiola {
+  faixa: string;
+  inicio: number;
+  votos: Record<string, number>;
+  /** relógio do servidor no envio (para o client calcular a diferença de relógio) */
+  agora: number;
+}
+
 export interface UsuarioMe {
   id: number;
   username: string;
@@ -83,8 +118,13 @@ export interface ServerToClient {
   emote: (d: { id: string; tipo: Emote }) => void;
   /** brinde coletivo: todos esses peixes brindaram juntos */
   brinde: (d: { ids: string[] }) => void;
-  /** o barman serviu uma dose no ponto `pontoId` */
-  servido: (d: { id: string; pontoId: string }) => void;
+  /** o barman serviu algo no ponto `pontoId` (dose ou água) */
+  servido: (d: { id: string; pontoId: string; tipo: 'dose' | 'agua' }) => void;
+  dardos_estado: (e: EstadoAlvo) => void;
+  /** um dardo foi arremessado (para o 3D cravar e mostrar a pontuação) */
+  dardo: (d: { alvo: number; id: string; acerto: AcertoDardo; total: number; restam: number }) => void;
+  dardos_placar: (d: { alvo: number; recordes: Recorde[] }) => void;
+  radiola: (e: EstadoRadiola) => void;
   online: (n: number) => void;
   aviso: (texto: string) => void;
 }
@@ -99,4 +139,10 @@ export interface ClientToServer {
   dancar: (estilo: Danca | null) => void;
   sentar: (assentoId: string, ack: (ok: boolean, erro?: string) => void) => void;
   levantar: () => void;
+  dardos_entrar: (alvo: number, ack: (ok: boolean, erro?: string) => void) => void;
+  /** t = segundos desde o início da rodada, no relógio do client (o servidor confere) */
+  dardos_arremessar: (t: number) => void;
+  dardos_sair: () => void;
+  radiola_votar: (faixa: string) => void;
+  pedir_agua: (pontoId: string, ack: (nivel: number) => void) => void;
 }
