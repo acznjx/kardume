@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Política de Privacidade · Kardume</title>
+    <meta name="description" content="Quais dados o Kardume guarda, para quê, por quanto tempo e como exercer seus direitos pela LGPD." />
+    <link rel="icon" type="image/svg+xml" href="/peixe.svg" />
+    <link rel="stylesheet" href="/legal.css" />
+  </head>
+  <body>
+    <main>
+      <div class="topo">
+        <a class="marca" href="/">← Kardume</a>
+        <nav class="docs" aria-label="Documentos">
+          <a href="/privacidade.html" aria-current="page">Privacidade</a>
+          <a href="/cookies.html">Cookies</a>
+          <a href="/termos.html">Termos de uso</a>
+        </nav>
+      </div>
+
+      <h1>Política de Privacidade</h1>
+      <p class="data">Última atualização: 25 de novembro de 2026</p>
+
+      <div class="resumo">
+        <p>
+          <b>Em resumo:</b> guardamos só o necessário para o seu peixe existir. Não vendemos dados, não usamos
+          anúncios, rastreadores nem ferramentas de análise, e o site não carrega nada de outros domínios. Você
+          pode baixar ou apagar seus dados a qualquer momento pelo Camarim, dentro do jogo.
+        </p>
+      </div>
+
+      <h2>1. Quem cuida dos seus dados</h2>
+      <p>
+        O Kardume é um jogo social em desenvolvimento, mantido por um time independente, que é o controlador dos
+        dados descritos aqui, nos termos da Lei Geral de Proteção de Dados (Lei nº 13.709/2018, a LGPD).
+        Para qualquer assunto de privacidade, escreva para <b>[e-mail de contato do time]</b>.
+      </p>
+
+      <h2>2. O que guardamos</h2>
+      <table>
+        <thead>
+          <tr><th>Dado</th><th>Para quê</th><th>Por quanto tempo</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Nome do peixe</td><td>Identificar sua conta e mostrar você no aquário</td><td>Até você excluir a conta</td></tr>
+          <tr><td>Senha</td><td>Entrar na conta. Guardamos só um <i>hash</i> bcrypt; ninguém, nem o time, consegue ver a senha</td><td>Até você excluir a conta</td></tr>
+          <tr><td>E-mail (opcional)</td><td>Recuperar a conta, se você informar</td><td>Até você remover o e-mail ou excluir a conta</td></tr>
+          <tr><td>Desenho ou modelo do peixe e roupas</td><td>Mostrar seu peixe para os outros jogadores</td><td>Até você trocar ou excluir a conta</td></tr>
+          <tr><td>Data de criação da conta</td><td>Mostrar "sócio desde" no seu perfil</td><td>Até você excluir a conta</td></tr>
+          <tr><td>Sessões (token com <i>hash</i> e validade)</td><td>Manter você conectado</td><td>1 dia, ou 30 dias com "lembrar de mim"; somem ao sair</td></tr>
+        </tbody>
+      </table>
+
+      <p><b>O que fica só na memória do servidor e nunca é gravado:</b></p>
+      <ul>
+        <li><b>Mensagens de chat:</b> são entregues na hora para quem está na sala. As últimas 30 de cada sala ficam na memória para quem acabou de chegar e somem quando o servidor reinicia.</li>
+        <li><b>Posição e ações no aquário</b> (nadar, sentar, dançar).</li>
+        <li><b>Endereço IP:</b> usado por alguns minutos para limitar tentativas de login e proteger contra ataques.</li>
+      </ul>
+      <p>
+        Não pedimos documento, foto, telefone, endereço ou data de nascimento. A confirmação de maioridade é uma
+        declaração sua no cadastro e não fica guardada.
+      </p>
+
+      <h2>3. Bases legais</h2>
+      <ul>
+        <li><b>Execução de contrato</b> (art. 7º, V): os dados da conta são necessários para o jogo funcionar como você pediu.</li>
+        <li><b>Legítimo interesse</b> (art. 7º, IX): uso temporário do IP e das sessões para segurança e prevenção de abuso.</li>
+      </ul>
+      <p>Não usamos seus dados para publicidade nem para criar perfis de comportamento.</p>
+
+      <h2>4. Com quem compartilhamos</h2>
+      <p>
+        Com ninguém para fins comerciais. Os outros jogadores veem o que é público dentro do jogo: o nome e a
+        aparência do seu peixe e as mensagens que você manda no chat. Se o site for publicado por meio de um
+        serviço de hospedagem, túnel ou CDN, esse serviço processa o tráfego apenas como operador, para entregar
+        o site. Podemos fornecer dados se uma ordem judicial ou a lei exigirem.
+      </p>
+
+      <h2>5. Seus direitos</h2>
+      <p>Pela LGPD (art. 18), você pode, a qualquer momento:</p>
+      <ul>
+        <li><b>Acessar e levar seus dados:</b> no jogo, abra o <b>Camarim → Conta → Baixar meus dados</b> para receber um arquivo JSON com tudo o que guardamos.</li>
+        <li><b>Corrigir:</b> troque nome, e-mail e senha no próprio Camarim.</li>
+        <li><b>Excluir:</b> em <b>Camarim → Conta → Excluir minha conta</b>. A conta e as sessões são apagadas na hora, e o banco sobrescreve os dados apagados.</li>
+        <li><b>Tirar dúvidas, se opor a algum uso ou reclamar:</b> pelo e-mail acima ou na Autoridade Nacional de Proteção de Dados (ANPD).</li>
+      </ul>
+
+      <h2>6. Segurança</h2>
+      <ul>
+        <li>Senhas com hash bcrypt e tokens de sessão aleatórios, guardados só como hash.</li>
+        <li>Cookie de sessão inacessível ao JavaScript da página e bloqueado em pedidos vindos de outros sites.</li>
+        <li>Política de Segurança de Conteúdo (CSP) que só deixa rodar código do próprio Kardume.</li>
+        <li>Limite de tentativas de login por IP e por conta.</li>
+        <li>Conexão protegida por HTTPS quando o jogo está publicado.</li>
+      </ul>
+      <p>
+        Nenhum sistema é 100% seguro. Se acontecer um incidente que possa trazer risco para você, avisamos os
+        afetados e a ANPD, como manda a lei.
+      </p>
+
+      <h2>7. Maiores de 18</h2>
+      <p>
+        O Kardume é só para maiores de 18 anos. Se soubermos que uma conta é de menor de idade, ela será excluída.
+      </p>
+
+      <h2>8. Mudanças nesta política</h2>
+      <p>
+        Se mudarmos algo importante, avisamos dentro do jogo antes de a mudança valer. A data no topo mostra a
+        última atualização.
+      </p>
+
+      <footer>Veja também a <a href="/cookies.html">Política de Cookies</a> e os <a href="/termos.html">Termos de uso</a>.</footer>
+    </main>
+  </body>
+</html>

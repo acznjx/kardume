@@ -595,3 +595,61 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- privacidade e dados ---------- */
+
+.cm-texto {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cm-tinta-2);
+}
+.cm-links {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.cm-links .cm-btn {
+  text-decoration: none;
+  display: inline-block;
+}
+.cm-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 18px;
+  font-size: 12.5px;
+}
+.cm-legal a {
+  color: var(--cm-tinta-2);
+  text-underline-offset: 3px;
+  text-decoration-color: var(--cm-linha);
+}
+.cm-legal a:hover {
+  color: var(--cm-tinta);
+  text-decoration-color: currentColor;
+}
+.cm-link--perigo {
+  color: var(--cm-erro);
+  text-decoration-color: color-mix(in srgb, var(--cm-erro) 40%, transparent);
+}
+.cm-perigo {
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--cm-erro) 35%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cm-erro) 5%, transparent);
+  animation: cm-troca 0.35s var(--cm-ease) both;
+}
+.cm-perigo p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--cm-tinta-2);
+}
+.cm-btn--perigo {
+  background: var(--cm-erro);
+  color: #fff;
+}
+.cm-btn--perigo:hover:not(:disabled) {
+  background: #9a2f23;
+}

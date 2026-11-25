@@ -33,6 +33,9 @@ Variáveis úteis:
 | `CARDUME_HTTPS` | — | `1` marca o cookie como `Secure` (use atrás de HTTPS) |
 | `LOG_LEVEL` | warn | `info` mostra cada requisição |
 | `CARDUME_TRUST_PROXY` | — | IP do proxy confiável (ex.: `127.0.0.1` com cloudflared), para o limite de tentativas usar o IP real |
+| `CARDUME_ORIGENS` | — | origens extras aceitas em escrita e WebSocket, se o domínio público difere do `Host` (ex.: `https://kardume.app`) |
+
+Modelo completo em [`.env.example`](../.env.example); detalhes na seção Segurança e privacidade do README.
 
 ## 3. Deixar rodando sempre (pm2)
 

@@ -191,3 +191,97 @@ describe('contas', () => {
     expect(nova.statusCode).toBe(200);
   });
 });
+
+describe('segurança', () => {
+  it('manda os cabeçalhos de segurança em toda resposta', async () => {
+    const r = await app.inject({ method: 'GET', url: '/api/online' });
+    expect(r.headers['content-security-policy']).toContain("frame-ancestors 'none'");
+    expect(r.headers['content-security-policy']).toContain("object-src 'none'");
+    expect(r.headers['x-content-type-options']).toBe('nosniff');
+    expect(r.headers['x-frame-options']).toBe('DENY');
+    expect(r.headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    expect(r.headers['cross-origin-opener-policy']).toBe('same-origin');
+    expect(r.headers['cache-control']).toBe('no-store');
+    expect(r.headers['x-powered-by']).toBeUndefined();
+    // fora de produção com HTTPS não pode haver HSTS
+    expect(r.headers['strict-transport-security']).toBeUndefined();
+    const nf = await app.inject({ method: 'GET', url: '/api/nao-existe' });
+    expect(nf.headers['x-content-type-options']).toBe('nosniff');
+  });
+
+  it('recusa POST vindo de outro site (CSRF)', async () => {
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/login',
+      remoteAddress: '10.0.0.5',
+      headers: { origin: 'https://malvado.example', host: 'localhost:3000' },
+      payload: { username: 'tito', senha: 'senha123' },
+    });
+    expect(r.statusCode).toBe(403);
+    const ok = await app.inject({
+      method: 'POST',
+      url: '/api/login',
+      remoteAddress: '10.0.0.5',
+      headers: { origin: 'http://localhost:3000', host: 'localhost:3000' },
+      payload: { username: 'tito', senha: 'senha123' },
+    });
+    expect(ok.statusCode).toBe(200);
+  });
+
+  it('recusa senha acima de 72 bytes (limite do bcrypt)', async () => {
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/register',
+      remoteAddress: '10.0.0.6',
+      payload: { username: 'longa', senha: 'x'.repeat(73), maior18: true },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it('não devolve detalhes internos em JSON malformado', async () => {
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/login',
+      remoteAddress: '10.0.0.7',
+      headers: { 'content-type': 'application/json' },
+      payload: '{"username": ',
+    });
+    expect(r.statusCode).toBe(400);
+    expect(r.json()).toEqual({ erro: 'Requisição inválida.' });
+  });
+
+  it('isola as contas: cada sessão só vê e altera os próprios dados', async () => {
+    const a = cookieDe(await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.8', payload: { username: 'dono.a', senha: 'senha123', maior18: true } }));
+    const b = cookieDe(await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.8', payload: { username: 'dono.b', senha: 'senha123', maior18: true } }));
+    const idB = (await app.inject({ method: 'GET', url: '/api/me', headers: { cookie: b } })).json().id;
+    // mesmo mandando o id de B no corpo, A só altera a si mesmo
+    const r = await app.inject({ method: 'PATCH', url: '/api/me/perfil', headers: { cookie: a }, payload: { id: idB, username: 'invadido' } });
+    expect(r.json().username).toBe('invadido');
+    expect((await app.inject({ method: 'GET', url: '/api/me', headers: { cookie: b } })).json().username).toBe('dono.b');
+    // exportação traz só a conta da sessão
+    const dados = (await app.inject({ method: 'GET', url: '/api/me/dados', headers: { cookie: b } })).json();
+    expect(dados.conta.nome).toBe('dono.b');
+    expect(JSON.stringify(dados)).not.toContain('senha_hash');
+    // sem sessão, nada
+    expect((await app.inject({ method: 'GET', url: '/api/me/dados' })).statusCode).toBe(401);
+  });
+
+  it('exclui a conta só com a senha e derruba a sessão', async () => {
+    const c = cookieDe(await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.9', payload: { username: 'tchau', senha: 'senha123', maior18: true } }));
+    expect((await app.inject({ method: 'DELETE', url: '/api/me', headers: { cookie: c }, payload: { senha: 'errada99' } })).statusCode).toBe(401);
+    expect((await app.inject({ method: 'DELETE', url: '/api/me', headers: { cookie: c }, payload: { senha: 'senha123' } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/me', headers: { cookie: c } })).statusCode).toBe(401);
+    const login = await app.inject({ method: 'POST', url: '/api/login', remoteAddress: '10.0.0.9', payload: { username: 'tchau', senha: 'senha123' } });
+    expect(login.statusCode).toBe(401);
+  });
+
+  it('trava a conta depois de muitas senhas erradas, com a mesma resposta para conta inexistente', async () => {
+    const tentar = (username: string, senha: string, ip: string) =>
+      app.inject({ method: 'POST', url: '/api/login', remoteAddress: ip, payload: { username, senha } });
+    // IPs diferentes para não cair no limite por IP (simula ataque distribuído)
+    for (let i = 0; i < 10; i++) expect((await tentar('tito', 'errada99', `10.1.0.${i}`)).statusCode).toBe(401);
+    expect((await tentar('tito', 'senha123', '10.1.0.50')).statusCode).toBe(429);
+    for (let i = 0; i < 10; i++) await tentar('ninguem', 'errada99', `10.2.0.${i}`);
+    expect((await tentar('ninguem', 'errada99', '10.2.0.50')).statusCode).toBe(429);
+  });
+});

@@ -527,7 +527,75 @@ function AbaConta({ rodape }: { rodape: (n: ReactNode) => void }) {
           </div>
         </form>
       </section>
+
+      <SecaoPrivacidade />
     </div>
+  );
+}
+
+/* ---------------- privacidade e dados (LGPD) ---------------- */
+
+function SecaoPrivacidade() {
+  const [excluindo, setExcluindo] = useState(false);
+  const [senha, setSenha] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
+
+  async function excluir(e: FormEvent) {
+    e.preventDefault();
+    setMsg(null);
+    setEnviando(true);
+    try {
+      await api.excluirConta(senha);
+      useApp.getState().sair();
+    } catch (err) {
+      setMsg({ ok: false, texto: (err as Error).message });
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <section className="cm-secao">
+      <h3>Privacidade e dados</h3>
+      <p className="cm-texto">
+        Guardamos só o necessário para o seu peixe existir. Você pode baixar uma cópia de tudo ou apagar a conta quando quiser.
+      </p>
+      <div className="cm-links">
+        {/* link direto: o navegador manda o cookie da sessão e baixa o JSON */}
+        <a className="cm-btn cm-btn--linha" href="/api/me/dados" download>
+          Baixar meus dados
+        </a>
+      </div>
+      <nav className="cm-legal" aria-label="Documentos">
+        <a href="/privacidade.html" target="_blank" rel="noopener noreferrer">Privacidade</a>
+        <a href="/cookies.html" target="_blank" rel="noopener noreferrer">Cookies</a>
+        <a href="/termos.html" target="_blank" rel="noopener noreferrer">Termos de uso</a>
+      </nav>
+
+      {!excluindo ? (
+        <button type="button" className="cm-link cm-link--perigo" onClick={() => setExcluindo(true)}>
+          Excluir minha conta
+        </button>
+      ) : (
+        <form className="cm-perigo" onSubmit={excluir}>
+          <p>
+            Isso apaga o peixe, a roupa, o e-mail e todas as sessões. <b>Não dá para desfazer.</b>
+          </p>
+          <Aviso msg={msg} />
+          <Campo rotulo="Confirme com sua senha">
+            <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="current-password" required />
+          </Campo>
+          <div className="cm-linha">
+            <button type="button" className="cm-link" onClick={() => { setExcluindo(false); setSenha(''); setMsg(null); }}>
+              Cancelar
+            </button>
+            <button type="submit" className="cm-btn cm-btn--perigo" disabled={enviando || !senha}>
+              {enviando ? 'Excluindo…' : 'Excluir para sempre'}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
 

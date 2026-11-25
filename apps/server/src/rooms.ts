@@ -407,6 +407,15 @@ export function criarSalas(io: Io, auth: Auth) {
         io.to(j.sala).emit('perfil', { id: j.id, nome: j.nome });
       }
     },
+    /** Conta excluída: tira o peixe do aquário em todas as conexões dele. */
+    desconectarConta(userId: number) {
+      for (const j of jogadores.values()) {
+        if (j.userId === userId) {
+          j.socket.emit('aviso', 'Sua conta foi excluída.');
+          j.socket.disconnect(true);
+        }
+      }
+    },
     desconectarSessao(token: string) {
       for (const j of jogadores.values()) {
         if (j.token === token) {

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { api } from './net/api';
 import { useApp } from './store';
 import { LoginScreen } from './login/LoginScreen';
+import { AvisoCookies } from './AvisoCookies';
 
 // o 3D só é baixado depois do login
 const FishEditor = lazy(() => import('./editor/FishEditor').then((m) => ({ default: m.FishEditor })));
@@ -26,10 +27,14 @@ export function App() {
   }, [tela]);
 
   if (tela === 'carregando') return <Carregando />;
-  if (tela === 'login') return <LoginScreen />;
   return (
-    <Suspense fallback={<Carregando />}>
-      {tela === 'editor' ? <FishEditor /> : <Game />}
-    </Suspense>
+    <>
+      {tela === 'login' ? (
+        <LoginScreen />
+      ) : (
+        <Suspense fallback={<Carregando />}>{tela === 'editor' ? <FishEditor /> : <Game />}</Suspense>
+      )}
+      <AvisoCookies />
+    </>
   );
 }
