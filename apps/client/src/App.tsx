@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { api } from './net/api';
 import { useApp } from './store';
-import { LoginScreen } from './login/LoginScreen';
+import { Entrada } from './entrada/Entrada';
 import { AvisoCookies } from './AvisoCookies';
 
 // o 3D só é baixado depois do login
@@ -30,7 +30,7 @@ export function App() {
   return (
     <>
       {tela === 'login' ? (
-        <LoginScreen />
+        <Entrada />
       ) : (
         <Suspense fallback={<Carregando />}>{tela === 'editor' ? <FishEditor /> : <Game />}</Suspense>
       )}
