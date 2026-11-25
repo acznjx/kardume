@@ -26,4 +26,5 @@ export const api = {
   salvarRoupa: (roupa: Roupa) => req<UsuarioMe>('PUT', '/api/me/roupa', { roupa }),
   salvarPerfil: (dados: { username?: string; email?: string }) => req<UsuarioMe>('PATCH', '/api/me/perfil', dados),
   trocarSenha: (atual: string, nova: string) => req<{ ok: true }>('PUT', '/api/me/senha', { atual, nova }),
+  excluirConta: (senha: string) => req<{ ok: true }>('DELETE', '/api/me', { senha }),
 };

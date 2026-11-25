@@ -640,6 +640,29 @@
   gap: 14px;
 }
 
+.lg-legal {
+  display: flex;
+  gap: 12px;
+}
+.lg-legal a {
+  color: #e7e2d3;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(231, 226, 211, 0.4);
+}
+.lg-legal a:hover {
+  text-decoration-color: currentColor;
+}
+.lg-aceite {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+.lg-aceite a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
 /* modal simples */
 .lg-modal {
   position: fixed;

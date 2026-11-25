@@ -268,6 +268,14 @@ export function LoginScreen() {
             )}
           </div>
 
+          {aba !== 'entrar' && (
+            <p className="lg-aceite">
+              Ao criar a conta você concorda com os{' '}
+              <a href="/termos.html" target="_blank" rel="noopener noreferrer">termos</a> e a{' '}
+              <a href="/privacidade.html" target="_blank" rel="noopener noreferrer">política de privacidade</a>.
+            </p>
+          )}
+
           {erro && <p className="lg-erro" role="alert">{erro}</p>}
 
           <button className="lg-botao" type="submit" disabled={enviando}>
@@ -301,6 +309,11 @@ export function LoginScreen() {
           {online.ok ? 'conexão estável' : 'sem conexão'}
         </span>
         <div className="lg-rodape__dir">
+          <nav className="lg-legal" aria-label="Documentos">
+            <a href="/privacidade.html" target="_blank" rel="noopener noreferrer">privacidade</a>
+            <a href="/cookies.html" target="_blank" rel="noopener noreferrer">cookies</a>
+            <a href="/termos.html" target="_blank" rel="noopener noreferrer">termos</a>
+          </nav>
           <span className="lg-caixa">v0.0.1 · protótipo</span>
           <span>© 2026 Kardume</span>
         </div>

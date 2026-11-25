@@ -1,0 +1,13 @@
+# Atualizações de segurança das dependências (npm) toda semana, em PRs separados.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      react-three:
+        patterns: ['@react-three/*', 'three', '@types/three']
+      fontes:
+        patterns: ['@fontsource/*']
