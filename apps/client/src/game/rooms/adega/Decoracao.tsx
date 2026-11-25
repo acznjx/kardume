@@ -26,7 +26,7 @@ function Boia(props: Grupo) {
     <mesh material={mat(PALETA.caneca)}><torusGeometry args={[0.9, 0.24, 5, 12]} /></mesh>
     {[0, 1, 2, 3].map((i) => <group key={i} rotation={[0, 0, i * Math.PI / 2]}><mesh position={[0, 0.9, 0]} material={mat('#c9553e')}><boxGeometry args={[0.48, 0.42, 0.49]} /></mesh></group>)}
     <mesh material={mat('#bba072')}><torusGeometry args={[1.2, 0.045, 4, 12]} /></mesh>
-    <Placa texto='CARDUME' largura={1.5} altura={0.35} position={[0, -1.48, 0.1]} />
+    <Placa texto='KARDUME' largura={1.5} altura={0.35} position={[0, -1.48, 0.1]} />
   </group>;
 }
 function Remos(props: Grupo) {
@@ -64,7 +64,7 @@ function QuadroDoses(props: Grupo) {
     ctx.textAlign = 'center'; ctx.fillStyle = '#f4dda7'; ctx.font = 'bold 48px Georgia';
     ctx.fillText('DOSES DO DIA', 256, 100);
     ctx.font = '30px Georgia';
-    ['Uma maré de sabor', '────────────', 'Espuma de onda', 'Rum do naufrágio', 'Licor de coral', '────────────', 'Saúde, cardume!'].forEach((t, i) => ctx.fillText(t, 256, 180 + i * 60));
+    ['Uma maré de sabor', '────────────', 'Espuma de onda', 'Rum do naufrágio', 'Licor de coral', '────────────', 'Saúde, kardume!'].forEach((t, i) => ctx.fillText(t, 256, 180 + i * 60));
     const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace; return t;
   }, []);
   return <group {...props}>
