@@ -268,6 +268,11 @@ export function conectar(visitante: boolean) {
     if (st.remotos[id]) useMundo.setState({ remotos: { ...st.remotos, [id]: { ...st.remotos[id], aparencia } } });
   });
 
+  s.on('perfil', ({ id, nome }) => {
+    const st = useMundo.getState();
+    if (st.remotos[id]) useMundo.setState({ remotos: { ...st.remotos, [id]: { ...st.remotos[id], nome } } });
+  });
+
   s.on('sino', () => useMundo.setState({ sinoEm: performance.now() }));
   s.on('acao', ({ id, acao }) => aplicarAcao(id, acao));
   s.on('emote', ({ id, tipo }) =>

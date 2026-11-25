@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Aparencia, RoomId } from '@cardume/shared';
@@ -101,7 +101,12 @@ export function Game() {
     return () => desconectar();
   }, [visitante]);
 
-  const aparencia: Aparencia = usuario?.aparencia ?? { tipo: 'modelo', modelo: 'palhaco' };
+  const roupaPrevia = useApp((s) => s.roupaPrevia);
+  const aparencia: Aparencia = useMemo(() => {
+    const base: Aparencia = usuario?.aparencia ?? { tipo: 'modelo', modelo: 'palhaco' };
+    // no camarim, o próprio peixe já aparece com a roupa que está sendo provada
+    return { ...base, roupa: roupaPrevia ?? usuario?.roupa ?? base.roupa };
+  }, [usuario, roupaPrevia]);
 
   return (
     <div className="jogo">

@@ -398,6 +398,15 @@ export function criarSalas(io: Io, auth: Auth) {
     aparenciaMudou(userId: number) {
       for (const j of jogadores.values()) if (j.userId === userId) atualizarAparencia(j);
     },
+    nomeMudou(userId: number) {
+      const u = auth.porId(userId);
+      if (!u) return;
+      for (const j of jogadores.values()) {
+        if (j.userId !== userId) continue;
+        j.nome = u.username;
+        io.to(j.sala).emit('perfil', { id: j.id, nome: j.nome });
+      }
+    },
     desconectarSessao(token: string) {
       for (const j of jogadores.values()) {
         if (j.token === token) {
