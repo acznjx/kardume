@@ -22,7 +22,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    document.title = tela === 'jogo' ? 'Cardume' : tela === 'editor' ? 'Cardume · Desenhe seu peixe' : 'Cardume · Entrar no aquário';
+    document.title = tela === 'jogo' ? 'Kardume' : tela === 'editor' ? 'Kardume · Desenhe seu peixe' : 'Kardume · Entrar no aquário';
   }, [tela]);
 
   if (tela === 'carregando') return <Carregando />;

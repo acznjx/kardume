@@ -2,7 +2,7 @@
   "name": "cardume",
   "private": true,
   "version": "0.0.1",
-  "description": "Cardume — um aquário social em 3D no navegador.",
+  "description": "Kardume — bons peixes, maus hábitos. Um aquário social em 3D no navegador.",
   "type": "module",
   "workspaces": ["packages/shared", "apps/server", "apps/client"],
   "engines": { "node": ">=22.13" },

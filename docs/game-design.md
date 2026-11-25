@@ -1,4 +1,4 @@
-# Cardume: game design
+# Kardume: game design
 
 > Documento vivo. Consolida o [resumo do projeto](resumo-do-projeto.md), a apresentação "Aquariun" e as decisões tomadas na v0.1.
 

@@ -29,6 +29,12 @@ export function abrirBanco(caminho = process.env.CARDUME_DB ?? resolve(import.me
     );
     CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
   `);
+
+  // migrações de colunas novas (bancos antigos não têm)
+  const colunas = new Set((db.prepare('PRAGMA table_info(users)').all() as { name: string }[]).map((c) => c.name));
+  if (!colunas.has('email')) db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+  if (!colunas.has('roupa')) db.exec('ALTER TABLE users ADD COLUMN roupa TEXT');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users(email COLLATE NOCASE) WHERE email IS NOT NULL');
   return db;
 }
 
@@ -41,4 +47,6 @@ export interface UserRow {
   fish_modelo: string | null;
   fish_versao: number;
   created_at: number;
+  email: string | null;
+  roupa: string | null;
 }
