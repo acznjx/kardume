@@ -1,0 +1,48 @@
+/* Páginas legais do Kardume: estáticas, sem scripts e sem nada externo (o CSP continua 'self'). */
+:root {
+  --papel: #f6f2e9;
+  --tinta: #1d1e20;
+  --tinta-2: #55524c;
+  --linha: rgba(29, 30, 32, 0.14);
+  --acento: #c9553c;
+}
+* { box-sizing: border-box; }
+html { background: #2b6370; }
+body {
+  margin: 0;
+  padding: 48px 16px 64px;
+  font: 16px/1.65 Georgia, 'Times New Roman', serif;
+  color: var(--tinta);
+}
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 44px 48px 48px;
+  background: var(--papel);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px -14px rgba(0, 0, 0, 0.45);
+}
+.topo { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.marca { font: 600 13px ui-monospace, 'Courier New', monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--acento); text-decoration: none; }
+nav.docs { display: flex; gap: 16px; font: 13px system-ui, sans-serif; }
+nav.docs a { color: var(--tinta-2); }
+nav.docs a[aria-current] { color: var(--tinta); font-weight: 600; text-decoration: none; }
+h1 { font-size: 34px; line-height: 1.15; margin: 22px 0 4px; font-weight: 400; }
+.data { margin: 0 0 28px; font: 13px system-ui, sans-serif; color: var(--tinta-2); }
+h2 { font-size: 21px; font-weight: 400; margin: 34px 0 10px; padding-top: 20px; border-top: 1px solid var(--linha); }
+p, li { color: #2c2c2c; }
+ul { padding-left: 22px; }
+li + li { margin-top: 4px; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font: 14px/1.5 system-ui, sans-serif; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--linha); }
+th { font-weight: 600; background: rgba(29, 30, 32, 0.04); }
+code { font: 13px ui-monospace, 'Courier New', monospace; background: rgba(29, 30, 32, 0.06); padding: 1px 5px; border-radius: 4px; }
+.resumo { padding: 16px 18px; border-radius: 10px; background: rgba(201, 85, 60, 0.08); font: 15px/1.55 system-ui, sans-serif; }
+.resumo p { margin: 0; }
+a { color: var(--acento); text-underline-offset: 3px; }
+footer { margin-top: 40px; font: 13px system-ui, sans-serif; color: var(--tinta-2); }
+@media (max-width: 600px) {
+  body { padding: 0; }
+  main { border-radius: 0; padding: 28px 20px 36px; }
+  h1 { font-size: 28px; }
+}

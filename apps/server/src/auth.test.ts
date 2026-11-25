@@ -250,6 +250,31 @@ describe('segurança', () => {
     expect(r.json()).toEqual({ erro: 'Requisição inválida.' });
   });
 
+  it('isola as contas: cada sessão só vê e altera os próprios dados', async () => {
+    const a = cookieDe(await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.8', payload: { username: 'dono.a', senha: 'senha123', maior18: true } }));
+    const b = cookieDe(await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.8', payload: { username: 'dono.b', senha: 'senha123', maior18: true } }));
+    const idB = (await app.inject({ method: 'GET', url: '/api/me', headers: { cookie: b } })).json().id;
+    // mesmo mandando o id de B no corpo, A só altera a si mesmo
+    const r = await app.inject({ method: 'PATCH', url: '/api/me/perfil', headers: { cookie: a }, payload: { id: idB, username: 'invadido' } });
+    expect(r.json().username).toBe('invadido');
+    expect((await app.inject({ method: 'GET', url: '/api/me', headers: { cookie: b } })).json().username).toBe('dono.b');
+    // exportação traz só a conta da sessão
+    const dados = (await app.inject({ method: 'GET', url: '/api/me/dados', headers: { cookie: b } })).json();
+    expect(dados.conta.nome).toBe('dono.b');
+    expect(JSON.stringify(dados)).not.toContain('senha_hash');
+    // sem sessão, nada
+    expect((await app.inject({ method: 'GET', url: '/api/me/dados' })).statusCode).toBe(401);
+  });
+
+  it('exclui a conta só com a senha e derruba a sessão', async () => {
+    const c = cookieDe(await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.9', payload: { username: 'tchau', senha: 'senha123', maior18: true } }));
+    expect((await app.inject({ method: 'DELETE', url: '/api/me', headers: { cookie: c }, payload: { senha: 'errada99' } })).statusCode).toBe(401);
+    expect((await app.inject({ method: 'DELETE', url: '/api/me', headers: { cookie: c }, payload: { senha: 'senha123' } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/me', headers: { cookie: c } })).statusCode).toBe(401);
+    const login = await app.inject({ method: 'POST', url: '/api/login', remoteAddress: '10.0.0.9', payload: { username: 'tchau', senha: 'senha123' } });
+    expect(login.statusCode).toBe(401);
+  });
+
   it('trava a conta depois de muitas senhas erradas, com a mesma resposta para conta inexistente', async () => {
     const tentar = (username: string, senha: string, ip: string) =>
       app.inject({ method: 'POST', url: '/api/login', remoteAddress: ip, payload: { username, senha } });

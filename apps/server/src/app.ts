@@ -46,6 +46,7 @@ export async function criarServidor({ caminhoBanco }: { caminhoBanco?: string } 
     aoMudarAparencia: (userId) => salas.aparenciaMudou(userId),
     aoMudarNome: (userId) => salas.nomeMudou(userId),
     aoSair: (token) => salas.desconectarSessao(token),
+    aoExcluirConta: (userId) => salas.desconectarConta(userId),
   });
   app.get('/api/online', async () => ({ online: salas.online(), servidor: 'Coral Raso' }));
 

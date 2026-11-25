@@ -87,6 +87,9 @@ export function criarAuth(db: DB) {
     porEmail: db.prepare('SELECT id FROM users WHERE email = ? COLLATE NOCASE'),
     salvarSenha: db.prepare('UPDATE users SET senha_hash = ? WHERE id = ?'),
     apagarOutrasSessoes: db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?'),
+    // sessões caem junto pelo ON DELETE CASCADE
+    apagarConta: db.prepare('DELETE FROM users WHERE id = ?'),
+    sessoesDaConta: db.prepare('SELECT expires_at FROM sessions WHERE user_id = ? ORDER BY expires_at DESC'),
   };
 
   function validarNome(username: unknown): string | null {
@@ -192,6 +195,7 @@ export function rotasAuth(
     aoMudarAparencia: (userId: number) => void;
     aoMudarNome: (userId: number) => void;
     aoSair: (token: string) => void;
+    aoExcluirConta: (userId: number) => void;
   },
 ) {
   /*
@@ -389,6 +393,47 @@ export function rotasAuth(
     auth.stmts.salvarSenha.run(await bcrypt.hash(nova, 10), u.id);
     // derruba as outras sessões (outros aparelhos); esta continua
     auth.stmts.apagarOutrasSessoes.run(u.id, auth.hashToken(req.cookies[COOKIE]!));
+    return { ok: true };
+  });
+
+  // ---- LGPD: baixar os próprios dados (art. 18, II e V) ----
+  app.get('/api/me/dados', async (req, reply) => {
+    const u = exigirUsuario(req, reply);
+    if (!u) return;
+    const sessoes = auth.stmts.sessoesDaConta.all(u.id) as { expires_at: number }[];
+    reply.header('Content-Disposition', 'attachment; filename="kardume-meus-dados.json"');
+    return {
+      geradoEm: new Date().toISOString(),
+      conta: {
+        id: u.id,
+        nome: u.username,
+        email: u.email,
+        criadaEm: new Date(u.created_at).toISOString(),
+      },
+      peixe: {
+        tipo: u.fish_png ? 'desenho' : u.fish_modelo ? 'modelo' : null,
+        modelo: u.fish_modelo,
+        desenhoPng: u.fish_png ? `data:image/png;base64,${u.fish_png}` : null,
+        contorno: u.fish_contorno ? JSON.parse(u.fish_contorno) : null,
+        roupa: roupaDe(u),
+      },
+      sessoesAtivas: sessoes.map((s) => ({ expiraEm: new Date(s.expires_at).toISOString() })),
+      observacao: 'A senha é guardada só como hash bcrypt e não pode ser exportada. Mensagens de chat não são gravadas.',
+    };
+  });
+
+  // ---- LGPD: excluir a conta (art. 18, VI) ----
+  app.delete('/api/me', async (req, reply) => {
+    const u = exigirUsuario(req, reply);
+    if (!u) return;
+    if (!limiteSenha(String(u.id))) return reply.code(429).send({ erro: 'Muitas tentativas. Espere alguns minutos.' });
+    const { senha } = (req.body ?? {}) as Record<string, unknown>;
+    // pede a senha de novo: um cookie roubado ou um computador destravado não bastam para apagar a conta
+    if (typeof senha !== 'string' || !senha || senha.length > 200) return reply.code(400).send({ erro: 'Digite sua senha para confirmar.' });
+    if (!(await bcrypt.compare(senha, u.senha_hash))) return reply.code(401).send({ erro: 'A senha não confere.' });
+    auth.stmts.apagarConta.run(u.id);
+    eventos.aoExcluirConta(u.id);
+    reply.clearCookie(COOKIE, { path: '/' });
     return { ok: true };
   });
 
