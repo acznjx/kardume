@@ -5,6 +5,7 @@ import { useApp } from '../store';
 import { getSocket, local, useMundo } from '../game/mundo';
 import { EMOTES, type Emote } from '@cardume/shared';
 import { useGraficos } from '../game/Efeitos';
+import { Camarim } from './Camarim';
 import {
   alternarDanca,
   alternarModo,
@@ -130,7 +131,6 @@ function Ajuda({ fechar }: { fechar: () => void }) {
 export function Hud() {
   const visitante = useApp((s) => s.visitante);
   const sair = useApp((s) => s.sair);
-  const irPara = useApp((s) => s.irPara);
   const sala = useMundo((s) => s.sala);
   const online = useMundo((s) => s.online);
   const conectado = useMundo((s) => s.conectado);
@@ -144,6 +144,7 @@ export function Hud() {
   const interacao = useInteracao();
   const modo = useModoLocal();
   const [mostraAviso, setMostraAviso] = useState(false);
+  const [camarim, setCamarim] = useState(false);
   const [ajuda, setAjuda] = useState(() => {
     try {
       return !localStorage.getItem('cardume-ajuda-vista');
@@ -187,7 +188,11 @@ export function Hud() {
         <button onClick={alternarGraficos} title="Gráficos: bonito (sombras macias, brilho) ou leve (para computador mais fraco)">
           gráficos: {qualidade}
         </button>
-        {!visitante && <button onClick={() => irPara('editor')}>editar peixe</button>}
+        {!visitante && (
+          <button onClick={() => setCamarim(true)} title="Camarim: visual do peixe e dados da conta">
+            camarim
+          </button>
+        )}
         <button onClick={visitante ? sair : logout}>{visitante ? 'voltar' : 'sair'}</button>
       </div>
 
@@ -254,6 +259,8 @@ export function Hud() {
           </button>
         </div>
       )}
+
+      {camarim && !visitante && <Camarim fechar={() => setCamarim(false)} />}
 
       {ajuda && <Ajuda fechar={fecharAjuda} />}
 
