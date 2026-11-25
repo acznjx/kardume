@@ -1,8 +1,10 @@
-# 🐟 Cardume
+# 🐟 Kardume
+
+*bons peixes, maus hábitos*
 
 Um aquário social em 3D no navegador, para maiores de 18 anos. Cada jogador é um peixe (desenhado por ele mesmo) que nada, conversa, fica em pé e vai beber na adega com os amigos.
 
-![Bar do Cardume, referência de estilo](docs/referencias/estilo-bar-do-cardume.png)
+![Bar do Kardume, referência de estilo](docs/referencias/estilo-bar-do-cardume.png)
 
 ## O que tem na v0.1
 
@@ -11,7 +13,7 @@ Um aquário social em 3D no navegador, para maiores de 18 anos. Cada jogador é 
 - **Desenhe seu peixe**: o desenho em 2D vira um peixe 3D "inflado". Também dá para escolher um dos 7 peixes prontos.
 - **Duas salas multiplayer em tempo real**:
   - **Navio naufragado**: convés, porão com cofre, sino e garrafa com a mensagem do dia.
-  - **Adega / Bar do Cardume**: balcão, Seu Garoupa (o barman), mesas, timão, escotilhas e alvo de dardos.
+  - **Adega / Bar do Kardume**: balcão, Seu Garoupa (o barman), mesas, timão, escotilhas e alvo de dardos.
 - **Chat em bolhas** sobre os peixes, com filtro de palavras.
 - **Nadar / em pé**: com a tecla F aparecem perninhas de tênis. Na adega só se entra em pé.
 - **Bebida tem consequência**: cada dose embaralha o que você digita. A partir de 3 doses dá soluço, o nado fica torto e a câmera balança. O efeito passa com o tempo.

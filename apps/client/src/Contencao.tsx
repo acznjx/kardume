@@ -12,7 +12,7 @@ export class Contencao extends Component<{ children: ReactNode; reserva?: ReactN
   }
 
   componentDidCatch(erro: Error, info: ErrorInfo) {
-    console.warn('[Cardume] erro contido:', erro.message, info.componentStack?.split('\n')[1]?.trim());
+    console.warn('[Kardume] erro contido:', erro.message, info.componentStack?.split('\n')[1]?.trim());
   }
 
   render() {

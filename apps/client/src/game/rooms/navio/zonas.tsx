@@ -17,7 +17,7 @@ export function Praca() {
       {[1.5, 2.5].map((y, i) => <group key={y}><mesh material={mat(CORES.coral)} position={[0, y, 0]}><cylinderGeometry args={[1.6 - i * 0.6, 0.4, 0.4, 8]} /></mesh><Haste a={[0, y - 0.7, 0]} b={[0, y, 0]} r={0.2} cor={CORES.ouro} /></group>)}
       <Concha position={[0, 2.8, 0]} scale={1.7} />
       {Array.from({ length: 8 }, (_, i) => <Concha key={i} position={[Math.sin(i * Math.PI / 4) * 2.6, 0.9, Math.cos(i * Math.PI / 4) * 2.6]} rotation={[0, i * Math.PI / 4, 0]} />)}
-      <Placa texto="PRAÇA DO CARDUME" largura={6.5} altura={1} position={[0, 4.8, -4]} rotation={[0, 0, -0.025]} />
+      <Placa texto="PRAÇA DO KARDUME" largura={6.5} altura={1} position={[0, 4.8, -4]} rotation={[0, 0, -0.025]} />
       {[-5, 5].map(dx => <Haste key={dx} a={[dx, 0, -4]} b={[dx, 6, -4]} r={0.18} />)}
       <Bandeirinhas a={[-5, 5.8, -4]} b={[5, 5.8, -4]} />
       {[-7, 7].map(dx => <Lanterna key={dx} poste position={[dx, 0, 5]} />)}

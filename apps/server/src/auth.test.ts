@@ -97,7 +97,7 @@ describe('contas', () => {
     const cookie = cookieDe(r);
 
     const modelo = await app.inject({ method: 'PUT', url: '/api/me/fish', headers: { cookie }, payload: { tipo: 'modelo', modelo: 'luna' } });
-    expect(modelo.json().aparencia).toEqual({ tipo: 'modelo', modelo: 'luna' });
+    expect(modelo.json().aparencia).toMatchObject({ tipo: 'modelo', modelo: 'luna' });
 
     const invalido = await app.inject({
       method: 'PUT',
@@ -131,5 +131,63 @@ describe('contas', () => {
     const img = await app.inject({ method: 'GET', url: ap.png });
     expect(img.statusCode).toBe(200);
     expect(img.headers['content-type']).toBe('image/png');
+  });
+
+  it('roupeiro: salva a roupa e ela vai junto na aparência', async () => {
+    const r = await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.2', payload: { username: 'bia', senha: 'senha123', maior18: true } });
+    const cookie = cookieDe(r);
+    expect(r.json().roupa).toMatchObject({ chapeu: 'nenhum', tenis: 'creme' });
+    await app.inject({ method: 'PUT', url: '/api/me/fish', headers: { cookie }, payload: { tipo: 'modelo', modelo: 'bia' } });
+
+    const roupa = { chapeu: 'cartola', corChapeu: 'vinho', oculos: 'coracao', pescoco: 'cachecol', corPescoco: 'teal', tenis: 'preto' };
+    const salvo = await app.inject({ method: 'PUT', url: '/api/me/roupa', headers: { cookie }, payload: { roupa } });
+    expect(salvo.statusCode).toBe(200);
+    expect(salvo.json().roupa).toEqual(roupa);
+    expect(salvo.json().aparencia.roupa).toEqual(roupa);
+
+    // peça desconhecida vira o padrão em vez de quebrar
+    const estranho = await app.inject({ method: 'PUT', url: '/api/me/roupa', headers: { cookie }, payload: { roupa: { chapeu: 'capacete-nasa' } } });
+    expect(estranho.json().roupa.chapeu).toBe('nenhum');
+    const ruim = await app.inject({ method: 'PUT', url: '/api/me/roupa', headers: { cookie }, payload: { roupa: 'cartola' } });
+    expect(ruim.statusCode).toBe(400);
+  });
+
+  it('perfil: troca nome e e-mail, sem repetir de outra conta', async () => {
+    const a = cookieDe(await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.3', payload: { username: 'nico', senha: 'senha123', maior18: true } }));
+    const b = cookieDe(await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.3', payload: { username: 'roxo', senha: 'senha123', maior18: true } }));
+
+    const ok = await app.inject({ method: 'PATCH', url: '/api/me/perfil', headers: { cookie: a }, payload: { username: 'nico.novo', email: 'Nico@Exemplo.com' } });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json()).toMatchObject({ username: 'nico.novo', email: 'nico@exemplo.com' });
+
+    const nomeTomado = await app.inject({ method: 'PATCH', url: '/api/me/perfil', headers: { cookie: b }, payload: { username: 'NICO.NOVO' } });
+    expect(nomeTomado.statusCode).toBe(409);
+    const emailTomado = await app.inject({ method: 'PATCH', url: '/api/me/perfil', headers: { cookie: b }, payload: { email: 'nico@exemplo.com' } });
+    expect(emailTomado.statusCode).toBe(409);
+    const emailRuim = await app.inject({ method: 'PATCH', url: '/api/me/perfil', headers: { cookie: b }, payload: { email: 'nao-e-email' } });
+    expect(emailRuim.statusCode).toBe(400);
+
+    const semEmail = await app.inject({ method: 'PATCH', url: '/api/me/perfil', headers: { cookie: a }, payload: { email: '' } });
+    expect(semEmail.json().email).toBeNull();
+
+    const login = await app.inject({ method: 'POST', url: '/api/login', remoteAddress: '10.0.0.3', payload: { username: 'nico.novo', senha: 'senha123' } });
+    expect(login.statusCode).toBe(200);
+  });
+
+  it('senha: exige a atual e derruba as outras sessões', async () => {
+    const r = await app.inject({ method: 'POST', url: '/api/register', remoteAddress: '10.0.0.4', payload: { username: 'oculos', senha: 'senha123', maior18: true } });
+    const esta = cookieDe(r);
+    const outra = cookieDe(await app.inject({ method: 'POST', url: '/api/login', remoteAddress: '10.0.0.4', payload: { username: 'oculos', senha: 'senha123' } }));
+
+    const errada = await app.inject({ method: 'PUT', url: '/api/me/senha', headers: { cookie: esta }, payload: { atual: 'errada1', nova: 'novasenha' } });
+    expect(errada.statusCode).toBe(401);
+
+    const ok = await app.inject({ method: 'PUT', url: '/api/me/senha', headers: { cookie: esta }, payload: { atual: 'senha123', nova: 'novasenha' } });
+    expect(ok.statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/me', headers: { cookie: esta } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/me', headers: { cookie: outra } })).statusCode).toBe(401);
+
+    const nova = await app.inject({ method: 'POST', url: '/api/login', remoteAddress: '10.0.0.4', payload: { username: 'oculos', senha: 'novasenha' } });
+    expect(nova.statusCode).toBe(200);
   });
 });

@@ -2,12 +2,13 @@ import { memo, useEffect, useMemo, useRef, useState, type MutableRefObject } fro
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import type { Aparencia, Emote, ModeloPeixe } from '@cardume/shared';
+import { CORES_ROUPA, ROUPA_PADRAO, type Aparencia, type Emote, type ModeloPeixe } from '@cardume/shared';
 import { criarModelo, type PartesPeixe } from './fish/modelos';
 import { carregarImagem, geometriaDoContorno, materialOndulante, texturaDoDesenho } from './fish/desenho3d';
 import { PALETA, mat } from './style/materials';
 import { mesclarEmUmaMalha } from './fish/mesclar';
 import { TrilhaBolhas } from './fish/TrilhaBolhas';
+import { criarRoupa, descartarRoupa, medirCorpo, type Medidas } from './fish/roupa3d';
 import type { AlvoPeixe } from './mundo';
 
 /** Altura do centro do peixe acima do chão quando está em pé. */
@@ -19,6 +20,8 @@ interface CorpoMontado {
   objeto: THREE.Object3D;
   base: number;
   altura: number;
+  /** pontos de encaixe da roupa (chapéu, óculos, pescoço) */
+  medidas: Medidas;
   animar: (t: number, movendo: boolean) => void;
   descartar: () => void;
 }
@@ -34,6 +37,8 @@ function montarModelo(modelo: ModeloPeixe | 'barman'): CorpoMontado {
     objeto: p.grupo,
     base: p.base,
     altura: p.altura,
+    // olho dos modelos prontos (ver criarModelo): x 0,5, y 0,17
+    medidas: medirCorpo(p.grupo, { x: 0.5, y: 0.17 }),
     animar: (t, movendo) => {
       p.cauda.rotation.y = Math.sin(t * (movendo ? 11 : 4)) * (movendo ? 0.5 : 0.22);
     },
@@ -52,6 +57,7 @@ async function montarDesenho(png: string, contorno: [number, number][]): Promise
     objeto: mesh,
     base,
     altura,
+    medidas: medirCorpo(mesh),
     animar: (t, movendo) => {
       uniforms.uTempo.value = t * (movendo ? 1 : 0.45);
       uniforms.uForca.value = movendo ? 1 : 0.5;
@@ -68,14 +74,14 @@ async function montarDesenho(png: string, contorno: [number, number][]): Promise
  * Perninhas de tênis (modo "em pé"). As duas pernas ficam afastadas também na direção do corpo
  * (uma mais à frente, outra mais atrás), para aparecerem separadas mesmo vendo o peixe de lado.
  */
-function criarPernas() {
+function criarPernas(corTenis = '#f7f6f1') {
   const g = new THREE.Group();
   const perna = mat('#f0c49a');
   const meia = mat('#fbfaf5');
-  const listra = mat('#e26a4f');
-  const tenis = mat('#f7f6f1');
-  const bico = mat('#e9e6dc');
-  const sola = mat('#c9413a');
+  const listra = mat(corTenis === CORES_ROUPA.coral ? CORES_ROUPA.creme : '#e26a4f');
+  const tenis = mat(corTenis);
+  const bico = mat(new THREE.Color(corTenis).multiplyScalar(0.92).getStyle());
+  const sola = mat(corTenis === CORES_ROUPA.preto ? '#f1ead9' : '#c9413a');
   const cadarco = mat('#2b2b2b');
   const lados: THREE.Group[] = [];
   for (const lado of [1, -1]) {
@@ -156,7 +162,9 @@ export const Fish = memo(function Fish({ aparencia, alvo, nome, bolha, destaque,
   const corpoRef = useRef<THREE.Group>(null);
   const subida = useRef({ yAnterior: NaN, vel: 0 });
   const [corpo, setCorpo] = useState<CorpoMontado | null>(null);
-  const pernas = useMemo(criarPernas, []);
+  const roupa = ('roupa' in aparencia ? aparencia.roupa : undefined) ?? ROUPA_PADRAO;
+  const corTenis = CORES_ROUPA[roupa.tenis] ?? CORES_ROUPA.creme;
+  const pernas = useMemo(() => criarPernas(corTenis), [corTenis]);
   useEffect(() => () => descartarGeometrias(pernas.grupo), [pernas]);
   const modoSuave = useRef(0); // 0 nadando, 1 em pé
   const soluco = useRef({ proximo: 3 + Math.random() * 6, ate: 0 });
@@ -194,6 +202,14 @@ export const Fish = memo(function Fish({ aparencia, alvo, nome, bolha, destaque,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chave]);
+
+  const chaveRoupa = `${roupa.chapeu}|${roupa.corChapeu}|${roupa.oculos}|${roupa.pescoco}|${roupa.corPescoco}`;
+  const roupa3d = useMemo(
+    () => (corpo ? criarRoupa(roupa, corpo.medidas) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [corpo, chaveRoupa],
+  );
+  useEffect(() => () => descartarRoupa(roupa3d), [roupa3d]);
 
   const lerAlvo = () => (typeof alvo === 'function' ? alvo() : alvo.current);
 
@@ -320,6 +336,7 @@ export const Fish = memo(function Fish({ aparencia, alvo, nome, bolha, destaque,
           }
         >
           {corpo && <primitive object={corpo.objeto} />}
+          {roupa3d && <primitive object={roupa3d} />}
           <primitive object={pernas.grupo} />
         </group>
       </group>
