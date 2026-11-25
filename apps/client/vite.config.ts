@@ -15,8 +15,8 @@ export default defineConfig({
     // CSP de desenvolvimento: libera inline/eval só para o React Refresh do Vite
     headers: cabecalhosSeguranca({ producao: false, https: false }),
     proxy: {
-      '/api': API,
-      '/socket.io': { target: API, ws: true },
+      '/api': { target: API, changeOrigin: false },
+      '/socket.io': { target: API, ws: true, changeOrigin: false },
     },
   },
   // `vite preview` simula o build final, então usa a política de produção (sem HSTS, que exige HTTPS)
