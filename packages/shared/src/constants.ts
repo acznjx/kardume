@@ -31,7 +31,10 @@ export function distancia(a: readonly number[], b: readonly number[], ignorarY =
 export const LIMITES = {
   usernameMin: 3,
   usernameMax: 20,
-  senhaMin: 6,
+  /** mínimo recomendado pelo NIST (SP 800-63B); só vale para senhas novas, logins antigos continuam */
+  senhaMin: 8,
+  /** o bcrypt ignora tudo depois de 72 bytes: acima disso a senha seria cortada sem aviso */
+  senhaMaxBytes: 72,
   chatMax: 120,
   /** velocidade máxima aceita pelo servidor (unidades/s), com folga */
   velocidadeMax: 46,

@@ -102,7 +102,7 @@ export function criarAuth(db: DB) {
     const erroNome = validarNome(username);
     if (erroNome) return erroNome;
     if (senha.length < LIMITES.senhaMin) return `A senha precisa ter pelo menos ${LIMITES.senhaMin} caracteres.`;
-    if (senha.length > 200) return 'Senha longa demais.';
+    if (Buffer.byteLength(senha) > LIMITES.senhaMaxBytes) return 'Senha longa demais (máximo 72 caracteres simples).';
     return null;
   }
 
@@ -194,6 +194,14 @@ export function rotasAuth(
     aoSair: (token: string) => void;
   },
 ) {
+  /*
+   * Isolamento por conta (o papel que o RLS faria num Postgres):
+   * - toda rota de conta usa o usuário da SESSÃO (exigirUsuario); nenhuma aceita id
+   *   de usuário vindo do corpo, da URL ou do client, então não há como mexer na conta de outro;
+   * - os UPDATE/DELETE sempre filtram por esse id (WHERE id = ?);
+   * - o navegador nunca fala com o banco: só este servidor abre o arquivo SQLite.
+   * Única leitura pública: /api/peixe/:id.png, o desenho que todos já veem no aquário.
+   */
   const limiteLogin = criarLimitador(10, 60_000);
   const limiteLoginGlobal = criarLimitador(120, 60_000);
   const limiteAparencia = criarLimitador(6, 60_000);
@@ -202,11 +210,34 @@ export function rotasAuth(
   const limiteSenha = criarLimitador(5, 10 * 60_000);
   const producao = process.env.NODE_ENV === 'production';
 
+  // Tentativas erradas por conta (além do limite por IP): segura força bruta distribuída
+  // contra um peixe específico. Conta só falhas e um acerto zera o contador. Nomes que não
+  // existem também acumulam falhas, então o 429 não revela se a conta existe.
+  const falhasPorConta = new Map<string, { n: number; desde: number }>();
+  const JANELA_FALHAS = 15 * 60_000;
+  const MAX_FALHAS = 10;
+  const contaBloqueada = (nome: string) => {
+    const f = falhasPorConta.get(nome);
+    if (!f) return false;
+    if (Date.now() - f.desde > JANELA_FALHAS) {
+      falhasPorConta.delete(nome);
+      return false;
+    }
+    return f.n >= MAX_FALHAS;
+  };
+  const registrarFalha = (nome: string) => {
+    const f = falhasPorConta.get(nome);
+    if (!f || Date.now() - f.desde > JANELA_FALHAS) falhasPorConta.set(nome, { n: 1, desde: Date.now() });
+    else f.n++;
+    if (falhasPorConta.size > 10_000) falhasPorConta.clear();
+  };
+
   const definirCookie = (reply: FastifyReply, token: string, expira: number, lembrar: boolean) => {
     reply.setCookie(COOKIE, token, {
       path: '/',
-      httpOnly: true,
-      sameSite: 'lax',
+      httpOnly: true, // JavaScript da página não lê o token (protege contra XSS roubando sessão)
+      sameSite: 'lax', // não vai em POST/fetch/WebSocket vindos de outros sites (CSRF)
+      // Secure só com HTTPS de verdade; em http://localhost o navegador descartaria o cookie
       secure: producao && process.env.CARDUME_HTTPS === '1',
       ...(lembrar ? { expires: new Date(expira) } : {}),
     });
@@ -224,6 +255,7 @@ export function rotasAuth(
     const erro = auth.validarCredenciais(username, senha);
     if (erro) return reply.code(400).send({ erro });
     if (maior18 !== true) return reply.code(400).send({ erro: 'O Kardume é só para maiores de 18 anos.' });
+    // nomes de peixe já são públicos dentro do jogo, então avisar que está em uso não vaza nada novo
     if (auth.stmts.porNome.get(username as string))
       return reply.code(409).send({ erro: 'Já existe um peixe com esse nome.' });
     const u = await auth.registrar(username as string, senha as string);
@@ -237,8 +269,16 @@ export function rotasAuth(
     const { username, senha, lembrar } = (req.body ?? {}) as Record<string, unknown>;
     if (typeof username !== 'string' || typeof senha !== 'string' || !username || !senha)
       return reply.code(400).send({ erro: 'Preencha usuário e senha.' });
+    if (username.length > 64 || senha.length > 200) return reply.code(400).send({ erro: 'Usuário ou senha não conferem.' });
+    const chave = username.trim().toLowerCase();
+    if (contaBloqueada(chave)) return reply.code(429).send({ erro: 'Muitas tentativas nesta conta. Espere alguns minutos.' });
     const u = await auth.verificar(username.trim(), senha);
-    if (!u) return reply.code(401).send({ erro: 'Usuário ou senha não conferem.' });
+    // mensagem única para "não existe" e "senha errada": não revela quais peixes existem
+    if (!u) {
+      registrarFalha(chave);
+      return reply.code(401).send({ erro: 'Usuário ou senha não conferem.' });
+    }
+    falhasPorConta.delete(chave);
     const s = auth.criarSessao(u.id, lembrar === true);
     definirCookie(reply, s.token, s.expira, lembrar === true);
     return auth.me(u);
@@ -341,10 +381,10 @@ export function rotasAuth(
     if (!u) return;
     if (!limiteSenha(String(u.id))) return reply.code(429).send({ erro: 'Muitas tentativas. Espere alguns minutos.' });
     const { atual, nova } = (req.body ?? {}) as Record<string, unknown>;
-    if (typeof atual !== 'string' || typeof nova !== 'string' || !atual)
+    if (typeof atual !== 'string' || typeof nova !== 'string' || !atual || atual.length > 200)
       return reply.code(400).send({ erro: 'Preencha a senha atual e a nova.' });
     if (nova.length < LIMITES.senhaMin) return reply.code(400).send({ erro: `A senha nova precisa ter pelo menos ${LIMITES.senhaMin} caracteres.` });
-    if (nova.length > 200) return reply.code(400).send({ erro: 'Senha longa demais.' });
+    if (Buffer.byteLength(nova) > LIMITES.senhaMaxBytes) return reply.code(400).send({ erro: 'Senha longa demais (máximo 72 caracteres simples).' });
     if (!(await bcrypt.compare(atual, u.senha_hash))) return reply.code(401).send({ erro: 'A senha atual não confere.' });
     auth.stmts.salvarSenha.run(await bcrypt.hash(nova, 10), u.id);
     // derruba as outras sessões (outros aparelhos); esta continua
